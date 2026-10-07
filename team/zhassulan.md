@@ -1,6 +1,6 @@
 ---
 handle: zhassulan
-name: Жасулан
+name: Kuandykov Zhasulan
 type: human
 since: 2026-10-07
 organization_role: студент 2 курса
