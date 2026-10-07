@@ -19,9 +19,13 @@ import urllib.request
 from pathlib import Path
 
 VERSION = "314.0.7"
-# The published asset is a .tar.bz2. The upstream "Downloading and deploying" page describes
-# pyodide-core as a .tar.gz, but no such asset exists for this release -- confirmed against the
-# GitHub releases API on 2026-10-07. The extension below is the one that actually resolves.
+# The published core asset is pyodide-core-{VERSION}.tar.bz2, confirmed against the GitHub releases
+# API on 2026-10-07 and consistent with the upstream deployment page for this version.
+#
+# Correction: an earlier revision of this file claimed the upstream page wrongly described the asset
+# as .tar.gz. That claim was false -- the reachable 314.0.7 page, its _sources markdown and the 0.19.1
+# page all say .tar.bz2 -- and it was retracted after independent review (finding F5). The original
+# error was in the harness, not in the documentation.
 ARCHIVE = f"pyodide-core-{VERSION}.tar.bz2"
 DEFAULT_URL = f"https://github.com/pyodide/pyodide/releases/download/{VERSION}/{ARCHIVE}"
 
