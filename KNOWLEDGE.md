@@ -33,9 +33,24 @@ No project legacy has been identified. Preserve original sources and explicit la
 
 ## 4. Project Facts
 
-No human-sourced project claim has been qualified yet. Relevant legacy topics, when present, remain
-at `knowledge/{category}.md`; new qualified claims use `knowledge/records/` and the shared record
-form. The directory is the route, not a maintained inventory. No counts or processed markers.
+Two qualified technical-reference records exist, produced by task `OOP_20261007-230107_TFS` and
+qualified by an independent reviewer:
+
+- [`KR-OOP-0001`](knowledge/records/KR-OOP-0001-pyodide-first-load-cost.md) — measured first-load cost
+  of `pyodide-core` 314.0.7 in Chrome: **6.10 MiB compressed / 12.92 MiB uncompressed**, ~1.84–2.34 s to
+  runtime ready. The figure is **conditional on the server's encoding state**, and the published
+  roadmap value `6.4 MB` is confirmed accurate.
+- [`KR-OOP-0002`](knowledge/records/KR-OOP-0002-runtime-environment-facts.md) — runtime environment
+  facts: the declared course needs **no `micropip`**; the runtime is **CPython 3.14.2**; the DSH
+  sandbox blocks Chromium by denying named pipes; DSH exposes no cost counters.
+
+Read `KR-OOP-0001` before quoting any Pyodide load cost, and `KR-OOP-0002` before promising a
+browser-based verification step or an economics capture in this harness.
+
+Beyond those, no human-sourced project claim has been qualified yet. Relevant legacy topics, when
+present, remain at `knowledge/{category}.md`; new qualified claims use `knowledge/records/` and the
+shared record form. The directory is the route, not a maintained inventory. No counts or processed
+markers.
 
 Producing roles return material context through existing role/stage sources. A justified-none outcome
 names the inspected scope; unavailable context stays explicit. `/tfw-knowledge` owns human-sourced
