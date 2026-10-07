@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Pyodide measurement harness</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 60rem; }
+  h1 { font-size: 1.2rem; }
+  pre { background: #f4f4f4; padding: 0.75rem; overflow-x: auto; white-space: pre-wrap; }
+  .pending { color: #8a6d00; }
+  .ok { color: #1a6b2a; }
+  .fail { color: #a11; }
+</style>
+</head>
+<body>
+<h1>Pyodide measurement harness — <code>pyodide-core</code> 314.0.7</h1>
+<p id="status" class="pending">запуск…</p>
+<pre id="report">ожидание</pre>
+
+<script type="module">
+// The page measures the cost a student would actually pay on first load and runs the
+// course's object-oriented probe to learn whether the standard library alone is enough.
+// It publishes one JSON object on window.__MEASUREMENT__ for measure.mjs to read over CDP.
+
+const statusEl = document.getElementById('status');
+const reportEl = document.getElementById('report');
+
+const result = {
+  harness: 'tools/measure-pyodide',
+  page: location.href,
+  startedAt: new Date().toISOString(),
+  loadMs: null,
+  initMs: null,
+  pythonVersion: null,
+  micropipNeeded: null,
+  probeChecks: [],
+  probeOk: null,
+  probeError: null,
+  done: false,
+  error: null,
+};
+
+window.__MEASUREMENT__ = result;
+
+function publish() {
+  reportEl.textContent = JSON.stringify(result, null, 2);
+}
+
+function fail(message) {
+  result.error = String(message);
+  result.done = true;
+  statusEl.textContent = 'ошибка';
+  statusEl.className = 'fail';
+  publish();
+}
+
+(async () => {
+  try {
+    // Step 1: load the runtime. This is the download-and-compile cost.
+    const loadStart = performance.now();
+    const { loadPyodide } = await import('./vendor/pyodide-core/pyodide.mjs');
+    const pyodide = await loadPyodide({ indexURL: './vendor/pyodide-core/' });
+    result.loadMs = Math.round(performance.now() - loadStart);
+
+    // Step 2: measure initialization separately, so the two costs are not conflated.
+    const initStart = performance.now();
+    await pyodide.runPythonAsync('import sys');
+    result.initMs = Math.round(performance.now() - initStart);
+    result.pythonVersion = await pyodide.runPythonAsync('sys.version.split()[0]');
+
+    // Step 3: run the course's object-oriented probe on the standard library alone.
+    const probeSource = await (await fetch('./oop_probe.py')).text();
+    const probeJson = await pyodide.runPythonAsync(`
+import json
+${probeSource}
+json.dumps(run_probe())
+`);
+    const probe = JSON.parse(probeJson);
+    result.probeChecks = probe.checks;
+    result.probeOk = probe.ok;
+    result.micropipNeeded = probe.micropip_needed;
+
+    result.done = true;
+    const failed = result.probeChecks.filter((check) => !check.ok).length;
+    statusEl.textContent = failed === 0
+      ? `готово · Python ${result.pythonVersion} · проб проверок: ${result.probeChecks.length}`
+      : `готово, но проб с ошибкой: ${failed}`;
+    statusEl.className = failed === 0 ? 'ok' : 'fail';
+    publish();
+  } catch (error) {
+    fail(error && error.stack ? error.stack : error);
+  }
+})();
+</script>
+</body>
+</html>
