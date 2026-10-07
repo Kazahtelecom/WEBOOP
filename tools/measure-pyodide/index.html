@@ -29,8 +29,8 @@ const result = {
   harness: 'tools/measure-pyodide',
   page: location.href,
   startedAt: new Date().toISOString(),
-  loadMs: null,
-  initMs: null,
+  timeToRuntimeReadyMs: null,
+  postStartupCallMs: null,
   pythonVersion: null,
   micropipNeeded: null,
   probeChecks: [],
@@ -56,16 +56,20 @@ function fail(message) {
 
 (async () => {
   try {
-    // Step 1: load the runtime. This is the download-and-compile cost.
-    const loadStart = performance.now();
+    // Step 1: time to runtime ready. This spans the ES-module import of pyodide.mjs AND
+    // loadPyodide(), which is where interpreter initialization actually happens. It therefore
+    // INCLUDES initialization and cannot be added to it (review finding F2).
+    const readyStart = performance.now();
     const { loadPyodide } = await import('./vendor/pyodide-core/pyodide.mjs');
     const pyodide = await loadPyodide({ indexURL: './vendor/pyodide-core/' });
-    result.loadMs = Math.round(performance.now() - loadStart);
+    result.timeToRuntimeReadyMs = Math.round(performance.now() - readyStart);
 
-    // Step 2: measure initialization separately, so the two costs are not conflated.
-    const initStart = performance.now();
+    // Step 2: cost of a trivial Python call issued after the runtime is up. This is NOT an
+    // initialization measurement and must never be presented as one; it exists only to confirm
+    // the interpreter answers and to expose its version (review finding F2).
+    const callStart = performance.now();
     await pyodide.runPythonAsync('import sys');
-    result.initMs = Math.round(performance.now() - initStart);
+    result.postStartupCallMs = Math.round(performance.now() - callStart);
     result.pythonVersion = await pyodide.runPythonAsync('sys.version.split()[0]');
 
     // Step 3: run the course's object-oriented probe on the standard library alone.

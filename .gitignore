@@ -14,9 +14,9 @@ coverage/
 .vscode/
 .idea/
 
-# Measurement harness: downloaded runtime and generated report are reproducible, not source
+# Measurement harness: downloaded runtime and generated reports are reproducible, not source
 tools/measure-pyodide/vendor/
-tools/measure-pyodide/measurement-report.json
+tools/measure-pyodide/measurement-report*.json
 
 # OS
 .DS_Store

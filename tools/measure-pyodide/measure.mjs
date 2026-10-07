@@ -39,9 +39,15 @@ function parseArgs(argv) {
     else if (key === '--browser') options.browser = value;
     else if (key === '--runs') options.runs = Number(value);
     else if (key === '--timeout') options.timeout = Number(value);
+    else if (key === '--label') options.label = value;
+    else if (key === '--out') options.out = value;
     else throw new Error(`unknown option: ${key}`);
   }
   options.url = options.url ?? `http://127.0.0.1:${options.port}/index.html`;
+  // Each delivery mode gets its own report; a single filename would let a compressed run
+  // silently overwrite the uncompressed baseline, which is exactly the comparison error
+  // review finding F1 caught.
+  options.out = options.out ?? `measurement-report${options.label ? `-${options.label}` : ''}.json`;
   return options;
 }
 
@@ -133,7 +139,7 @@ async function evaluate(cdp, expression) {
   return result.result.value;
 }
 
-async function runOnce(cdp, options, runIndex, profileIsFresh) {
+async function runOnce(cdp, options, runIndex, profilePath) {
   await cdp.send('Network.enable');
   await cdp.send('Page.enable');
 
@@ -171,11 +177,17 @@ async function runOnce(cdp, options, runIndex, profileIsFresh) {
 
   return {
     run: runIndex + 1,
-    profileIsFresh,
+    // Each run launches the browser with its own mkdtemp profile, so this figure is a first-load
+    // number rather than a cache-warm one. It was previously a literal `true` that proved nothing;
+    // it now reports the profile path the run actually used (review finding F12).
+    profile: profilePath ?? null,
     transferredBytes: encodedBytes,
     decodedBytes,
-    loadMs: payload.loadMs,
-    initMs: payload.initMs,
+    // Renamed from loadMs/initMs: the first spans import() plus loadPyodide(), the second is a
+    // later trivial call. The old names implied an initialization measurement the harness never
+    // made (review finding F2).
+    timeToRuntimeReadyMs: payload.timeToRuntimeReadyMs,
+    postStartupCallMs: payload.postStartupCallMs,
     pythonVersion: payload.pythonVersion,
     micropipNeeded: payload.micropipNeeded,
     probeChecks: payload.probeChecks,
@@ -228,11 +240,11 @@ async function main() {
 
         const cdp = await Cdp.connect(page.webSocketDebuggerUrl, 30_000);
         try {
-          const run = await runOnce(cdp, options, index, true);
+          const run = await runOnce(cdp, options, index, profile);
           run.browser = version.Browser;
           runs.push(run);
-          console.log(`run ${run.run}: ${formatBytes(run.transferredBytes)} transferred, ` +
-            `load ${run.loadMs} ms, init ${run.initMs} ms, Python ${run.pythonVersion}, ` +
+          console.log(`run ${run.run}: ${formatBytes(run.transferredBytes)} on the wire, ` +
+            `runtime ready ${run.timeToRuntimeReadyMs} ms, Python ${run.pythonVersion}, ` +
             `probe ${run.probeOk ? 'ok' : 'FAILED'}`);
         } finally {
           cdp.close();
@@ -253,9 +265,10 @@ async function main() {
     generatedAt: new Date().toISOString(),
     browser,
     target: options.url,
+    label: options.label ?? null,
     runs,
   };
-  const outFile = join(process.cwd(), 'measurement-report.json');
+  const outFile = join(process.cwd(), options.out);
   await writeFile(outFile, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 
   console.log();
@@ -264,9 +277,17 @@ async function main() {
   for (const run of runs) {
     if (run.error) { console.log(`run ${run.run}: ERROR ${run.error}`); continue; }
     console.log(`run ${run.run} (${run.browser}, fresh profile):`);
-    console.log(`  transferred over network: ${formatBytes(run.transferredBytes)} (${run.transferredBytes} bytes, compressed)`);
-    console.log(`  decoded payload:          ${formatBytes(run.decodedBytes)}`);
-    console.log(`  load + init:              ${run.loadMs} ms + ${run.initMs} ms`);
+    // "transferred" is wire bytes as the server actually sent them. Whether that number is
+    // compressed depends on the server, not on the runtime: python -m http.server sends no
+    // Content-Encoding, so its figure is uncompressed. The label states which was measured
+    // rather than asserting a compression state that may be false (review finding F1).
+    console.log(`  bytes on the wire:        ${formatBytes(run.transferredBytes)} (${run.transferredBytes} bytes as served by ${options.url})`);
+    console.log(`  decoded payload:          ${formatBytes(run.decodedBytes)} (runtime assets after decoding)`);
+    // timeToRuntimeReady covers the ES-module import plus loadPyodide(), which is where runtime
+    // initialization actually happens. postStartupCallMs is a later trivial call and is NOT
+    // an initialization measurement (review finding F2).
+    console.log(`  time to runtime ready:    ${run.timeToRuntimeReadyMs} ms (import + loadPyodide, includes initialization)`);
+    console.log(`  post-startup call:        ${run.postStartupCallMs} ms (a later import sys; not initialization)`);
     console.log(`  CPython:                  ${run.pythonVersion}`);
     console.log(`  micropip needed:          ${run.micropipNeeded}`);
     const failed = (run.probeChecks ?? []).filter((check) => !check.ok);
