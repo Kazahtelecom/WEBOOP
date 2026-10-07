@@ -69,7 +69,11 @@ function fail(message) {
     result.pythonVersion = await pyodide.runPythonAsync('sys.version.split()[0]');
 
     // Step 3: run the course's object-oriented probe on the standard library alone.
-    const probeSource = await (await fetch('./oop_probe.py')).text();
+    // The probe is a module, so its `from __future__` import must stay the first statement;
+    // it is dropped here rather than concatenated ahead of, because this snippet is exec'd
+    // as top-level source where a future import is only legal at the very beginning.
+    const probeSource = (await (await fetch('./oop_probe.py')).text())
+      .replace(/^from __future__ import annotations$/m, '');
     const probeJson = await pyodide.runPythonAsync(`
 import json
 ${probeSource}
