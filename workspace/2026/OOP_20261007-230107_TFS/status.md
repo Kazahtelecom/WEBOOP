@@ -10,11 +10,11 @@ coordinator_route: "dsh:session:local:weboop-init-20261007"
 upstream_route: owner:zhassulan
 dialogue: tfw-gates-only
 activation: owner-only
-coordination_authority: "HL-OOP_20261007-230107_TFS.md @ pending-baseline-freeze"
+coordination_authority: "HL-OOP_20261007-230107_TFS.md @ ce22916c9f5fd5e52f7f81021943cfd2ff3b32fc"
 reporting: native-gates
 selection_ref: baseline
 created: 20261007-230107
-updated: 20261007-230833
+updated: 20261007-230852
 ---
 
 **Task state.** This file is the only authority for this task's live state. Any downstream projection is disposable and never outranks it.
