@@ -1,0 +1,17 @@
+task_id: OOP_20261007-230107_TFS
+title: Локальная проверка кода студентов и реалистичность трёхнедельного курса по ООП
+min_iterations: 2
+max_iterations: 5
+iterations:
+  - number: 1
+    focus: "Какие подходы к автоматической проверке кода студентов существуют и какие из них работают строго локально, без деплоя и без серверного исполнения произвольного кода"
+    hypotheses: [H2, H3, H4]
+    status: pending
+    res_file: research/iter1/RES.md
+    sources: [external]
+  - number: 2
+    focus: "Реалистичность трёх недель по одному часу лекций и практики: какие темы ООП укладываются, и достаточна ли балльная модель без аутентификации"
+    hypotheses: [H1, H5]
+    status: pending
+    res_file: research/iter2/RES.md
+    sources: [external]
