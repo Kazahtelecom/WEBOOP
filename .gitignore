@@ -24,3 +24,7 @@ tools/measure-pyodide/measurement-report*.json
 # OS
 .DS_Store
 Thumbs.db
+
+# Heavy binary PDF materials and raw OOP course inputs
+*.pdf
+OOP/
