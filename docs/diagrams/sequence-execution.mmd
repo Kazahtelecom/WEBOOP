@@ -1,0 +1,33 @@
+sequenceDiagram
+    autonumber
+    actor Student as Студент
+    participant Editor as CodeEditor (UI)
+    participant WorkerBridge as Pyodide Worker Bridge
+    participant Worker as Web Worker (Pyodide WASM)
+    participant Output as Terminal / Test Results
+    participant Store as Course Store (Zustand)
+
+    Student->>Editor: Нажимает кнопку "Проверить решение"
+    Editor->>WorkerBridge: runTests(userCode, testCode)
+    WorkerBridge->>Output: Показать статус "Выполняется..."
+    
+    alt Рантайм еще не инициализирован
+        WorkerBridge->>Worker: INIT_RUNTIME
+        Worker-->>WorkerBridge: RUNTIME_READY
+    end
+
+    WorkerBridge->>Worker: POST_MESSAGE { type: 'EXECUTE', code, tests }
+    
+    critical Изоляция и таймаут выполнения
+        Worker->>Worker: Выполнение кода студента + тестов в WASM
+        Worker-->>WorkerBridge: { status: 'SUCCESS' | 'FAIL', stdout, results, passed }
+    option Таймаут (превышено 5 сек)
+        WorkerBridge->>Worker: terminate() (принудительный перезапуск воркера)
+        WorkerBridge->>Output: Ошибка: Превышен лимит времени выполнения (Time Limit Exceeded)
+    end
+
+    WorkerBridge->>Output: Отображение вывода stdout и списка тестов
+    alt Все тесты пройдены
+        WorkerBridge->>Store: markStepCompleted(stepId, score)
+        Store->>Student: Начисление баллов и разблокировка след. шага
+    end

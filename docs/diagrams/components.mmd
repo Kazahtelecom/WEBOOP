@@ -1,0 +1,28 @@
+flowchart TD
+    subgraph Browser ["Браузер студента (Local-first)"]
+        subgraph UI ["Слой представления (React + Tailwind)"]
+            Sidebar["Навигация / Прогресс курса"]
+            TheoryView["Просмотр теории (Markdown)"]
+            CodeEditor["Редактор кода (CodeMirror 6)"]
+            Terminal["Терминал вывода и результат тестов"]
+            ScoreBadge["Счётчик баллов"]
+        end
+
+        subgraph Store ["Слой состояния (Zustand)"]
+            CourseStore["Управление прогрессом, баллами и кодом"]
+            LocalStorage[("Local Storage\n(Автосохранение)")]
+        end
+
+        subgraph WorkerLayer ["Изолированный Web Worker"]
+            PyWorker["Pyodide Web Worker"]
+            PyodideRuntime["CPython 3.14 (WASM)"]
+            TestRunner["Скрипт запуска тестов (unittest/assert)"]
+        end
+    end
+
+    UI -->|Чтение и экшены| CourseStore
+    CourseStore <-->|Синхронизация| LocalStorage
+    UI -->|Запуск кода / тестов| PyWorker
+    PyWorker --> PyodideRuntime
+    PyodideRuntime --> TestRunner
+    PyWorker -->|Результат выполнения / ошибки| UI

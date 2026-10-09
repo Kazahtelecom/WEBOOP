@@ -1,0 +1,21 @@
+stateDiagram-v2
+    [*] --> NotStarted : Открытие нового шага
+
+    NotStarted --> InProgress : Студент начинает редактировать код
+    InProgress --> Running : Нажата кнопка "Проверить решение"
+
+    state Running {
+        [*] --> Executing : Передача в Pyodide Worker
+        Executing --> Evaluating : Прогон тестов (assert)
+    }
+
+    Running --> Failed : Ошибка синтаксиса или провал теста
+    Running --> Timeout : Выполнение > 5 сек (Worker Terminated)
+    Running --> Passed : Все тесты пройдены успешно (100%)
+
+    Failed --> InProgress : Доработка кода студентом
+    Timeout --> InProgress : Исправление зацикливания
+
+    Passed --> Completed : Начисление баллов в LocalStorage
+    Completed --> InProgress : Повторное решение / эксперименты
+    Completed --> [*] : Переход к следующему уроку

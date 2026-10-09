@@ -1,4 +1,4 @@
-﻿<!-- TFW:CODEX:START -->
+<!-- TFW:CODEX:START -->
 ## Trace-First Workflow Commands
 
 `.tfw/` traces are truth/memory. For `/tfw-*`, invoke its skill or read the canonical workflow completely. Root instructions are active; the workflow's read contract selects all further inputs and owns Role Lock, gates, templates, evidence, stop and route. The command must work without a wrapper.
@@ -71,3 +71,12 @@ roles or substitute for unavailable units. Iterative dialogue requires an exact 
 grant independent of task/phase topology. Fully
 manual owner-transfer reporting requires its own explicit human selection.
 <!-- TFW:CODEX:END -->
+
+## Product Development & Architecture (AI Guidelines)
+
+When working on product code (LMS application, curriculum content, Pyodide tests, UI):
+- **Single Source of Truth:** Consult [`docs/`](docs/) before writing or modifying product code.
+- **AI Guidelines:** Read [`docs/ai-guidelines.md`](docs/ai-guidelines.md) for strict rules, forbidden patterns, and code conventions.
+- **Architecture & Flow:** Read [`docs/architecture/overview.md`](docs/architecture/overview.md) and [`docs/architecture/execution-flow.md`](docs/architecture/execution-flow.md).
+- **Domain Model:** Read [`docs/domain/model.md`](docs/domain/model.md) for canonical TypeScript interfaces (Course, Week, CodeTask, Exam, StudentProgress).
+- **Tech Stack:** Read [`docs/stack.md`](docs/stack.md) (React 18/19, TypeScript strict, Vite, Tailwind CSS, Pyodide Web Worker).

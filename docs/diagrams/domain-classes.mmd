@@ -1,0 +1,89 @@
+classDiagram
+    class Course {
+        +string id
+        +string title
+        +string description
+        +Week[] weeks
+        +ExamTask finalExam
+        +number totalMaxScore
+    }
+
+    class Week {
+        +number weekNumber
+        +string topic
+        +string description
+        +Lesson lecture
+        +Practice practice
+        +Homework homework
+        +number maxScore
+    }
+
+    class Lesson {
+        +string id
+        +string title
+        +number durationMinutes
+        +string contentMarkdown
+        +InteractiveCheck[] quickChecks
+    }
+
+    class InteractiveCheck {
+        +string question
+        +string[] options
+        +number correctOptionIndex
+        +string explanation
+    }
+
+    class Practice {
+        +string id
+        +string title
+        +number scoreWeight
+        +CodeTask[] tasks
+    }
+
+    class Homework {
+        +string id
+        +string title
+        +number scoreWeight
+        +CodeTask task
+    }
+
+    class CodeTask {
+        +string id
+        +string title
+        +string descriptionMarkdown
+        +string starterCode
+        +string solutionCode
+        +string testCode
+        +number scorePoints
+        +string[] hints
+    }
+
+    class ExamTask {
+        +string id
+        +string title
+        +string descriptionMarkdown
+        +string buggyCode
+        +string fixedSolutionCode
+        +string verificationTests
+        +number examScore
+    }
+
+    class StudentProgress {
+        +number currentScore
+        +string currentStepId
+        +Map~string, boolean~ completedTasks
+        +Map~string, string~ userSavedCode
+        +boolean isExamUnlocked
+        +boolean isExamCompleted
+        +string lastUpdatedIso
+    }
+
+    Course "1" *-- "3" Week : состоит из
+    Course "1" *-- "1" ExamTask : включает итог
+    Week "1" *-- "1" Lesson : лекция
+    Week "1" *-- "1" Practice : практика
+    Week "1" *-- "1" Homework : ДЗ
+    Lesson "1" *-- "*" InteractiveCheck : мини-проверки
+    Practice "1" *-- "1..*" CodeTask : задачи практики
+    Homework "1" *-- "1" CodeTask : задача ДЗ
+    StudentProgress ..> Course : отслеживает
