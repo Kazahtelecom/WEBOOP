@@ -1,0 +1,76 @@
+classDiagram
+    direction TB
+
+    %% Неделя 1: Инкапсуляция
+    class TransitCard {
+        -str _card_id
+        -Decimal _balance
+        -bool _is_blocked
+        +str card_id
+        +Decimal balance
+        +bool is_blocked
+        +top_up(Decimal amount) void
+        +deduct(Decimal amount) bool
+        +block() void
+    }
+
+    class Passenger {
+        -str _passenger_id
+        -str _name
+        -TransitCard _card
+        +tap_card(ValidatorDevice validator) RideReceipt
+        +assign_card(TransitCard card) void
+    }
+
+    Passenger *-- "1" TransitCard : содержит (Инкапсуляция)
+
+    %% Неделя 2: Композиция тарифов
+    class FareCalculator {
+        -Decimal _base_rate
+        -DiscountPolicy _discount
+        -ZoneMultiplierPolicy _zone
+        +calculate() Decimal
+        +set_discount(DiscountPolicy policy) void
+    }
+
+    class DiscountPolicy {
+        <<interface>>
+        +apply(Decimal amount)* Decimal
+    }
+    class StudentDiscount {
+        +apply(Decimal amount) Decimal
+    }
+    class StandardDiscount {
+        +apply(Decimal amount) Decimal
+    }
+
+    FareCalculator *-- "1" DiscountPolicy : композирует (Composition)
+    DiscountPolicy <|.. StudentDiscount : реализует
+    DiscountPolicy <|.. StandardDiscount : реализует
+
+    %% Неделя 3: Полиморфизм платежей
+    class PaymentMethod {
+        <<Protocol / ABC>>
+        +process_payment(Decimal amount)* PaymentReceipt
+    }
+
+    class CardPayment {
+        -TransitCard card
+        +process_payment(Decimal amount) PaymentReceipt
+    }
+
+    class QRPayment {
+        -str qr_token
+        +process_payment(Decimal amount) PaymentReceipt
+    }
+
+    class ValidatorDevice {
+        -str _device_id
+        -FareCalculator _fare_calculator
+        +process_ride(PaymentMethod payment) RideReceipt
+    }
+
+    PaymentMethod <|.. CardPayment : полиморфно реализует
+    PaymentMethod <|.. QRPayment : полиморфно реализует
+    ValidatorDevice --> PaymentMethod : использует без if/elif (Полиморфизм)
+    ValidatorDevice *-- FareCalculator : использует
