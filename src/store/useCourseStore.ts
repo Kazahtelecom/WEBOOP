@@ -37,7 +37,7 @@ const safeStorage = {
 
 const DEFAULT_INITIAL_STATE: StudentProgressState = {
   currentScore: 0,
-  currentStepId: 'demo-task-1',
+  currentStepId: 'week-1-lecture',
   completedTasks: {},
   userSavedCode: {},
   isExamUnlocked: false,

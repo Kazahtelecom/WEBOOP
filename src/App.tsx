@@ -4,8 +4,10 @@ import { TheoryView } from './components/theory/TheoryView';
 import { CodeEditor } from './components/editor/CodeEditor';
 import { TerminalView } from './components/terminal/TerminalView';
 import { useCourseStore } from './store/useCourseStore';
+import { getCourseItemById } from './data/courseData';
 import { demoTask } from './data/demoCourse';
 import type { WorkerRequest, WorkerResponse, TestResultItem } from './types/worker';
+import type { CodeTask } from './types/course';
 
 export const App: React.FC = () => {
   const currentStepId = useCourseStore((state) => state.currentStepId);
@@ -26,13 +28,23 @@ export const App: React.FC = () => {
   const workerRef = useRef<Worker | null>(null);
   const watchdogTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Определение активного элемента курса
+  const resolvedItem = getCourseItemById(currentStepId);
+  let activeTask: CodeTask | null = null;
+
+  if (resolvedItem?.type === 'task') {
+    activeTask = resolvedItem.task;
+  } else if (currentStepId === demoTask.id) {
+    activeTask = demoTask;
+  }
+
   // Получение актуального кода для текущего шага
   const currentCode =
     userSavedCode[currentStepId] !== undefined
       ? userSavedCode[currentStepId]
-      : currentStepId === demoTask.id
-      ? demoTask.starterCode
-      : '# Введите код для экспериментов в песочнице\n';
+      : activeTask
+      ? activeTask.starterCode
+      : '# Интерактивная песочница для экспериментов с кодом лекции\nfrom decimal import Decimal\n\n';
 
   // Инициализация Web Worker с Pyodide
   const initWorker = useCallback(() => {
@@ -78,8 +90,8 @@ export const App: React.FC = () => {
         });
 
         // Начисление баллов при успешном прохождении тестов
-        if (msg.payload.passed) {
-          completeTask(msg.payload.taskId, demoTask.scorePoints);
+        if (msg.payload.passed && activeTask) {
+          completeTask(msg.payload.taskId, activeTask.scorePoints);
         }
         return;
       }
@@ -105,7 +117,7 @@ export const App: React.FC = () => {
     // Запуск инициализации Pyodide
     const initMsg: WorkerRequest = { type: 'INIT' };
     worker.postMessage(initMsg);
-  }, [completeTask]);
+  }, [completeTask, activeTask]);
 
   useEffect(() => {
     initWorker();
@@ -154,6 +166,12 @@ export const App: React.FC = () => {
 
   const handleRunTests = () => {
     if (!workerRef.current || runtimeStatus !== 'ready') return;
+
+    if (!activeTask || !activeTask.testCode) {
+      handleRunCode();
+      return;
+    }
+
     setError(undefined);
     setTestResults(undefined);
     armWatchdog();
@@ -162,19 +180,22 @@ export const App: React.FC = () => {
       type: 'RUN_TESTS',
       payload: {
         code: currentCode,
-        testCode: demoTask.testCode,
-        taskId: demoTask.id,
+        testCode: activeTask.testCode,
+        taskId: activeTask.id,
       },
     };
     workerRef.current.postMessage(msg);
   };
 
   const handleResetCode = () => {
-    if (confirm('Сбросить текущий код к исходному шаблону задачи?')) {
-      if (currentStepId === demoTask.id) {
-        setUserCode(demoTask.id, demoTask.starterCode);
+    if (confirm('Сбросить текущий код к исходному шаблону задания?')) {
+      if (activeTask) {
+        setUserCode(activeTask.id, activeTask.starterCode);
       } else {
-        setUserCode(currentStepId, '');
+        setUserCode(
+          currentStepId,
+          '# Интерактивная песочница для экспериментов с кодом лекции\nfrom decimal import Decimal\n\n'
+        );
       }
     }
   };

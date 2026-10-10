@@ -9,7 +9,7 @@ describe('useCourseStore (Zustand & LocalStorage persistence)', () => {
   it('инициализируется с нулевыми баллами и пустым состоянием задач', () => {
     const state = useCourseStore.getState();
     expect(state.currentScore).toBe(0);
-    expect(state.currentStepId).toBe('demo-task-1');
+    expect(state.currentStepId).toBe('week-1-lecture');
     expect(state.completedTasks).toEqual({});
     expect(state.userSavedCode).toEqual({});
     expect(state.isExamUnlocked).toBe(false);
