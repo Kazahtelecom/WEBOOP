@@ -40,6 +40,12 @@ export const Sidebar: React.FC = () => {
             week.practiceTasks.some((t) => t.id === currentStepId) ||
             week.homeworkTask?.id === currentStepId;
 
+          const weekEarned =
+            week.practiceTasks.reduce(
+              (acc, t) => acc + (completedTasks[t.id] ? t.scorePoints : 0),
+              0
+            ) + (week.homeworkTask && completedTasks[week.homeworkTask.id] ? week.homeworkTask.scorePoints : 0);
+
           return (
             <div key={week.weekNumber} className="space-y-1">
               <button
@@ -54,11 +60,24 @@ export const Sidebar: React.FC = () => {
                   <span className="font-semibold text-indigo-400">Неделя {week.weekNumber}</span>
                   <span className="text-[10px] text-slate-400 truncate">({week.topic})</span>
                 </div>
-                {isExpanded ? (
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                ) : (
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                )}
+                <div className="flex items-center space-x-1.5 flex-shrink-0">
+                  <span
+                    className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                      weekEarned === week.maxScore
+                        ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/60 font-semibold'
+                        : weekEarned > 0
+                        ? 'bg-amber-950/60 text-amber-300 border border-amber-800/40'
+                        : 'bg-slate-900 text-slate-500'
+                    }`}
+                  >
+                    {weekEarned}/{week.maxScore}б
+                  </span>
+                  {isExpanded ? (
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                  ) : (
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  )}
+                </div>
               </button>
 
               {isExpanded && (

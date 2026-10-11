@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useCourseStore } from '../../store/useCourseStore';
 import { getCourseItemById } from '../../data/courseData';
 import { BookOpen, HelpCircle, CheckCircle2, XCircle, Lightbulb, ChevronRight, Award } from 'lucide-react';
+import { MarkdownRenderer } from '../common/MarkdownRenderer';
 import type { Lesson, CodeTask } from '../../types/course';
 
 export const TheoryView: React.FC = () => {
@@ -45,9 +46,7 @@ export const TheoryView: React.FC = () => {
           <h1 className="text-2xl font-bold text-slate-100">{activeLesson.title}</h1>
 
           {/* Содержимое лекции */}
-          <div className="prose prose-invert prose-sm max-w-none space-y-4 text-slate-300 leading-relaxed whitespace-pre-line">
-            {activeLesson.contentMarkdown}
-          </div>
+          <MarkdownRenderer content={activeLesson.contentMarkdown} />
 
           {/* Блок самопроверки (Quick Checks) */}
           {activeLesson.quickChecks && activeLesson.quickChecks.length > 0 && (
@@ -145,9 +144,7 @@ export const TheoryView: React.FC = () => {
 
           <div className="space-y-4 text-sm text-slate-300">
             {/* Описание задачи */}
-            <div className="prose prose-invert prose-sm max-w-none space-y-3 whitespace-pre-line text-slate-300">
-              {activeTask.descriptionMarkdown}
-            </div>
+            <MarkdownRenderer content={activeTask.descriptionMarkdown} />
 
             {/* Подсказки */}
             {activeTask.hints && activeTask.hints.length > 0 && (

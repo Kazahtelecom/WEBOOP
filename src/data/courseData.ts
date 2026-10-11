@@ -1,5 +1,8 @@
 import type { Course, CodeTask, Lesson } from '../types/course';
 import { week1Lecture, week1PracticeTask, week1HomeworkTask } from './week1';
+import { week2Lecture, week2PracticeTask, week2HomeworkTask } from './week2';
+import { week3Lecture, week3PracticeTask, week3HomeworkTask } from './week3';
+import { finalExam } from './exam';
 
 export const weboopCourse: Course = {
   id: 'course-weboop-avtobys',
@@ -22,24 +25,11 @@ export const weboopCourse: Course = {
       weekNumber: 2,
       topic: 'Наследование и композиция («Composition over Inheritance»)',
       description:
-        'Контекст расчета тарифов: преодоление комбинаторного взрыва подклассов через композицию независимых политик скидок и зон.',
+        'Контекст расчета тарифов: преодоление комбинаторного взрыва подклассов через композицию независимых политик скидок, зон и часов пик.',
       maxScore: 25,
-      lecture: {
-        id: 'week-2-lecture',
-        title: 'Лекция 2: Наследование vs Композиция',
-        durationMinutes: 45,
-        contentMarkdown: '# Неделя 2: Наследование и композиция\n\nМодуль откроется на следующей неделе.',
-        quickChecks: [],
-      },
-      practiceTasks: [],
-      homeworkTask: {
-        id: 'week-2-hw-placeholder',
-        title: 'Домашнее задание 2 (Скоро)',
-        descriptionMarkdown: 'Задание станет доступно во 2-й неделе курса.',
-        starterCode: '# Домашнее задание 2\n',
-        testCode: '',
-        scorePoints: 10,
-      },
+      lecture: week2Lecture,
+      practiceTasks: [week2PracticeTask],
+      homeworkTask: week2HomeworkTask,
     },
     {
       weekNumber: 3,
@@ -47,33 +37,12 @@ export const weboopCourse: Course = {
       description:
         'Валидаторы в автобусах и обработка платежей: Duck Typing, протоколы typing.Protocol и полиморфная диспетчеризация без каскадов if/elif.',
       maxScore: 25,
-      lecture: {
-        id: 'week-3-lecture',
-        title: 'Лекция 3: Полиморфизм и протоколы',
-        durationMinutes: 45,
-        contentMarkdown: '# Неделя 3: Полиморфизм и протоколы\n\nМодуль откроется на 3-й неделе.',
-        quickChecks: [],
-      },
-      practiceTasks: [],
-      homeworkTask: {
-        id: 'week-3-hw-placeholder',
-        title: 'Домашнее задание 3 (Скоро)',
-        descriptionMarkdown: 'Задание станет доступно в 3-й неделе курса.',
-        starterCode: '# Домашнее задание 3\n',
-        testCode: '',
-        scorePoints: 10,
-      },
+      lecture: week3Lecture,
+      practiceTasks: [week3PracticeTask],
+      homeworkTask: week3HomeworkTask,
     },
   ],
-  finalExam: {
-    id: 'final-exam',
-    title: 'Финальный экзамен: Практический багфикс-квест (25 баллов)',
-    descriptionMarkdown:
-      'Поиск и исправление 3 скрытых логических ошибок в связной транспортной подсистеме Avtobys.',
-    buggyCode: '# Код финального экзамена\n',
-    testCode: '# Тесты экзамена\n',
-    examScore: 25,
-  },
+  finalExam,
 };
 
 /**
@@ -106,7 +75,11 @@ export function getCourseItemById(
         starterCode: weboopCourse.finalExam.buggyCode,
         testCode: weboopCourse.finalExam.testCode,
         scorePoints: weboopCourse.finalExam.examScore,
-        hints: ['Внимательно проанализируйте логику взаимодействия классов и проверьте нарушенные инварианты.'],
+        hints: [
+          'Баг 1: Проверьте условие вместимости ДО увеличения _current_passengers.',
+          'Баг 2: В калькуляторе тарифа примените self._discount_policy.apply(zoned).',
+          'Баг 3: Удалите проверку isinstance(payment, CardPayment) и вызывайте process_payment полиморфно.',
+        ],
       },
     };
   }

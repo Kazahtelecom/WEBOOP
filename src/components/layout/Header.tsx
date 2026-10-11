@@ -71,13 +71,23 @@ export const Header: React.FC = () => {
       </div>
 
       <div className="flex items-center space-x-3">
-        {/* Баллы студента */}
-        <div className="flex items-center space-x-2 bg-slate-900 border border-slate-800 px-3 py-1 rounded-lg">
-          <Award className="w-4 h-4 text-amber-400" />
-          <span className="text-xs text-slate-400">Баллы:</span>
-          <span className="text-sm font-bold text-amber-300 font-mono">
-            {currentScore} <span className="text-slate-500 font-normal">/ 100</span>
-          </span>
+        {/* Баллы студента + Прогресс-бар */}
+        <div className="flex items-center space-x-2.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
+          <Award className="w-4 h-4 text-amber-400 flex-shrink-0" />
+          <div className="flex flex-col">
+            <div className="flex items-center space-x-1.5">
+              <span className="text-[11px] text-slate-400">Баллы:</span>
+              <span className="text-xs font-bold text-amber-300 font-mono">
+                {currentScore} <span className="text-slate-500 font-normal">/ 100</span>
+              </span>
+            </div>
+            <div className="w-20 sm:w-28 h-1 bg-slate-800 rounded-full overflow-hidden mt-1">
+              <div
+                className="h-full bg-gradient-to-r from-indigo-500 to-amber-400 rounded-full transition-all duration-300"
+                style={{ width: `${Math.min(100, currentScore)}%` }}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Экспорт / Импорт / Сброс */}
