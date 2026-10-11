@@ -11,6 +11,7 @@ interface CodeEditorProps {
   onResetCode: () => void;
   isRunning: boolean;
   isReady: boolean;
+  hasTests?: boolean;
 }
 
 export const CodeEditor: React.FC<CodeEditorProps> = ({
@@ -21,6 +22,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   onResetCode,
   isRunning,
   isReady,
+  hasTests = true,
 }) => {
   return (
     <div className="h-full flex flex-col bg-slate-950">
@@ -56,20 +58,29 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
             <span>Запустить</span>
           </button>
 
-          {/* Проверка тестов */}
-          <button
-            onClick={onRunTests}
-            disabled={isRunning || !isReady}
-            title="Запустить проверочные автотесты задачи"
-            className={`flex items-center space-x-1.5 text-xs px-3.5 py-1.5 rounded font-medium shadow-sm transition ${
-              isRunning || !isReady
-                ? 'bg-indigo-900/50 text-indigo-400/50 cursor-not-allowed'
-                : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20'
-            }`}
-          >
-            <CheckCircle className="w-3.5 h-3.5" />
-            <span>Проверить тесты</span>
-          </button>
+          {/* Проверка тестов (только если у шага есть тесты) */}
+          {hasTests ? (
+            <button
+              onClick={onRunTests}
+              disabled={isRunning || !isReady}
+              title="Запустить проверочные автотесты задачи"
+              className={`flex items-center space-x-1.5 text-xs px-3.5 py-1.5 rounded font-medium shadow-sm transition ${
+                isRunning || !isReady
+                  ? 'bg-indigo-900/50 text-indigo-400/50 cursor-not-allowed'
+                  : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20'
+              }`}
+            >
+              <CheckCircle className="w-3.5 h-3.5" />
+              <span>Проверить тесты</span>
+            </button>
+          ) : (
+            <div
+              title="В лекциях нет проверочных тестов. Вы можете свободно экспериментировать в песочнице."
+              className="text-[11px] text-slate-500 bg-slate-900/60 border border-slate-800 px-2 py-1 rounded select-none hidden md:block"
+            >
+              Песочница теории
+            </div>
+          )}
         </div>
       </div>
 

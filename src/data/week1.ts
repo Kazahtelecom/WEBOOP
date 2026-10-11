@@ -4,140 +4,144 @@ export const week1Lecture: Lesson = {
   id: 'week-1-lecture',
   title: 'Лекция: Классы, объекты и инкапсуляция в Avtobys',
   durationMinutes: 45,
-  contentMarkdown: `# Неделя 1: Классы, объекты и инкапсуляция
+  contentMarkdown: `# Неделя 1: Классы, объекты и инкапсуляция в Avtobys
 
 Добро пожаловать в первый учебный модуль курса по Объектно-Ориентированному Программированию (ООП)!
-В течение курса мы будем разрабатывать архитектуру реальной платежной системы общественного транспорта **Avtobys**.
+В течение курса мы проектируем ядро доменной модели городской транспортной системы **Avtobys** (Алматы-Транзит).
 
 ---
 
-### 1. Проблема процедурного подхода и почему нужно ООП
+### 1. От процедурного подхода к объектам
 
-В процедурном программировании данные и функции существуют раздельно. Представим, что мы описываем транспортную карту обычным словарем:
+В процедурном подходе данные и функции оторваны друг от друга. Данные хранятся в открытых структурах (словарях, кортежах), а функции оперируют ими извне:
 
 \`\`\`python
 # Процедурный антипаттерн
-card = {
-    "card_id": "KZ-10029",
-    "balance": 500.0,
-    "is_blocked": False
+bus = {
+    "plate_number": "123 AB 02",
+    "capacity": 50,
+    "current_passengers": 48
 }
 
-def deduct_fare(card_dict, fare):
-    card_dict["balance"] -= fare
+def board(bus_dict, count):
+    bus_dict["current_passengers"] += count
 
-# Любая часть системы может случайно нарушить состояние:
-card["balance"] = -99999.0  # Отрицательный баланс!
-deduct_fare(card, 100.0)    # Деньги списаны с заблокированной карты!
+# Опасность: любая функция может случайно нарушить физический инвариант:
+board(bus, 10)  # В салоне 58 пассажиров при вместимости 50!
+bus["current_passengers"] = -5  # Отрицательное число людей!
 \`\`\`
 
-**Проблемы процедурного подхода в биллинге:**
-1. **Отсутствие защиты данных:** любой модуль может напрямую изменить \`balance\` или снять флаг блокировки.
-2. **Размытая ответственность:** проверка инвариантов (хватает ли средств, не заблокирована ли карта) повторяется в десятках функций.
-3. **Хрупкость при масштабировании:** изменение формата словаря ломает всю кодовую базу.
+**Проблемы процедурного подхода в сложных системах:**
+1. **Отсутствие защиты целостности:** любой участок кода может перезаписать состояние напрямую.
+2. **Дублирование валидации:** проверки \`0 <= current_passengers <= capacity\` приходится повторять в каждом месте посадки и высадки.
+3. **Хрупкость контрактов:** изменение структуры словаря ломает десятки несвязанных функций.
 
 ---
 
-### 2. Что такое инвариант класса?
+### 2. Инвариант класса и принцип сокрытия данных
 
-> **Инвариант класса (Class Invariant)** — это непреложное условие корректности состояния объекта, которое гарантированно выполняется после завершения конструктора и до/после вызова любого публичного метода.
+> **Инвариант класса (Class Invariant)** — непреложное условие истинности состояния объекта, которое выполняется после выхода из конструктора (\`__init__\`) и до/после вызова любого публичного метода.
 
-Для сущности **Транспортная карта (TransitCard)** действуют следующие инварианты:
-- **Баланс не может быть отрицательным:** \`balance >= 0.00\`.
-- **Идентификатор карты не может быть пустой строкой.**
-- **Скидка находится строго в диапазоне [0.0; 1.0].**
-- **Минимальная сумма пополнения — 100 KZT.**
-- **С заблокированной карты запрещены любые списания и пополнения.**
+Для сущности **Автобус (\`Bus\`)**:
+- Вместимость (\`capacity\`) строго в пределах \`[10; 250]\`.
+- Текущие пассажиры (\`current_passengers\`) строго в диапазоне \`[0; capacity]\`.
+- Госномер (\`plate_number\`) — непустая валидная строка.
 
-Объектно-ориентированный подход гарантирует: объект **невозможно** перевести в некорректное состояние извне.
+Для сущности **Маршрут (\`Route\`)**:
+- Базовый тариф (\`base_fare\`) — строго положительное число.
+- Список остановок (\`stops\`) содержит минимум 2 пункта (начальный и конечный), и соседние остановки не дублируются.
+
+Для сущности **Транспортная карта (\`TransitCard\`)**:
+- Баланс не может опускаться ниже \`Decimal("0.00")\`.
+- Пополнение разрешено только суммами от \`Decimal("100.00")\`.
+- С заблокированной карты запрещены любые списания и пополнения.
 
 ---
 
-### 3. Инкапсуляция и сокрытие данных в Python
+### 3. Инкапсуляция в Python: Соглашения и @property
 
-Инкапсуляция объединяет данные и методы работы с ними в единую капсулу (класс) и скрывает детали реализации от внешнего мира.
+В языке Python нет аппаратного ключевого слова \`private\`. Инкапсуляция держится на соглашениях:
 
-В Python инкапсуляция строится на соглашениях и свойствах:
-1. **Защищенные атрибуты (Protected):** префикс с одним подчеркиванием (например, \`self._balance\`). Это соглашение для программистов: «Это внутреннее состояние объекта, не изменяй его напрямую!».
-2. **Приватные атрибуты (Private / Name Mangling):** префикс с двумя подчеркиваниями (например, \`self.__card_id\`). Python автоматически трансформирует имя в \`_ClassName__card_id\`, защищая от случайного переопределения в подклассах.
-3. **Свойства (@property):** позволяют предоставлять публичный доступ для чтения без возможности неконтролируемой перезаписи извне.
+1. **Защищенные атрибуты (\`self._attribute\`):**
+   Соглашение PEP 8: «Это внутренняя деталь реализации. Не обращайся к ней и не меняй её напрямую из внешнего кода!».
+2. **Приватные атрибуты с искажением имен (\`self.__attribute\`):**
+   Механизм *Name Mangling* трансформирует имя в \`_ClassName__attribute\`, защищая от конфликтов имен при наследовании.
+3. **Свойства (\`@property\`):**
+   Позволяют предоставить контролируемый публичный доступ к данным на чтение (Read-Only) без возможности неконтролируемой перезаписи извне:
 
 \`\`\`python
-class TransitCard:
-    def __init__(self, card_id: str):
-        self._card_id = card_id
-        self._balance = Decimal("0.00")
+class Bus:
+    def __init__(self, plate_number: str, capacity: int):
+        self._plate_number = plate_number
+        self._capacity = capacity
+        self._current_passengers = 0
 
     @property
-    def balance(self) -> Decimal:
-        """Публичный геттер: баланс доступен только для чтения снаружи."""
-        return self._balance
+    def capacity(self) -> int:
+        """Вместимость доступна только для чтения."""
+        return self._capacity
+
+    @property
+    def current_passengers(self) -> int:
+        return self._current_passengers
 \`\`\`
 
 ---
 
-### 4. Принцип «Tell, Don't Ask» и антипаттерн Anemic Domain Model
+### 4. Принцип «Tell, Don't Ask» (Приказывай, а не спрашивай)
 
-Частая ошибка начинающих разработчиков — создание **анемичной модели предметной области (Anemic Domain Model)**: классов с одними лишь полями данных (мешок свойств), в то время как вся логика вынесена в процедурные сервисы.
-
-\`\`\`python
-# АНТИПАТТЕРН: Анемичный класс
-class BadTransitCard:
-    def __init__(self):
-        self.balance = 0.0
-        self.is_blocked = False
-
-# Внешний сервис спрашивает состояние и меняет его сам (Ask, Then Act):
-if card.balance >= fare and not card.is_blocked:
-    card.balance -= fare  # Опасно! Ответственность размазана.
-\`\`\`
-
-#### Принцип «Tell, Don't Ask» (Приказывай, а не спрашивай):
-Вместо того чтобы извлекать внутренности объекта, проверять их снаружи и перезаписывать, попросите объект выполнить действие самостоятельно:
+Антипаттерн **Anemic Domain Model** (Анемичная модель) превращает классы в простые «структуры данных с геттерами», а логику выносит наружу:
 
 \`\`\`python
-# ПРАВИЛЬНО: Rich Domain Model (Tell, Don't Ask)
-actual_fare = card.charge_fare(base_fare)
+# АНТИПАТТЕРН: Внешний код спрашивает и манипулирует сам:
+if bus.capacity - bus.current_passengers >= new_people:
+    bus.current_passengers += new_people
 \`\`\`
-Вся проверка баланса, учет скидки и списание инкапсулированы внутри метода \`charge_fare\`. Если средств недостаточно — метод выбрасывает \`InsufficientFundsError\`.
+
+**Правильный ООП-подход (Tell, Don't Ask):**
+Прикажите объекту выполнить операцию. Сам объект проверит свои инварианты и изменит состояние:
+
+\`\`\`python
+# ПРАВИЛЬНО: Инкапсулированная Rich Domain Model:
+bus.board_passengers(new_people)
+\`\`\`
+Если свободных мест недостаточно, метод выбрасывает доменное исключение \`CapacityExceededError\`, сохраняя предыдущее корректное состояние салона.
 
 ---
 
-### 5. Точность финансовых расчетов: почему Decimal, а не float?
+### 5. Точность финансовых расчетов: Decimal вместо float
 
-В Python стандартные числа с плавающей точкой (\`float\`) реализованы по стандарту двоичной арифметики IEEE 754:
-
+Числа \`float\` используют двоичное представление IEEE 754:
 \`\`\`python
->>> 0.1 + 0.2
-0.30000000000000004
 >>> 0.1 + 0.2 == 0.3
-False
+False  # 0.30000000000000004
 \`\`\`
-
-В биллинговых системах, где совершаются миллионы транзакций, накопление таких погрешностей приводит к финансовым убыткам.
-Поэтому в финансовых и доменных расчетах **всегда используется модуль \`decimal\`**:
+В биллинге и тарифах общественного транспорта накапливающиеся погрешности \`float\` недопустимы. В реальных финтех-системах всегда применяется стандартный модуль \`decimal.Decimal\`:
 
 \`\`\`python
 from decimal import Decimal
 
-balance = Decimal("100.00")
-fare = Decimal("80.00")
-remaining = balance - fare # Ровно Decimal('20.00')
+base_fare = Decimal("100.00")
+discount = Decimal("0.20")
+effective_fare = base_fare * (Decimal("1.00") - discount)  # Ровно Decimal('80.00')
 \`\`\`
 
 ---
 
 ### 6. Доменные исключения (Domain Exceptions)
 
-В надежной ООП-архитектуре при нарушении инвариантов выбрасываются специализированные доменные исключения, а не абстрактные ошибки:
-
+Надежный код сигнализирует о нарушении инвариантов бизнес-логики через специализированные классы исключений, наследуемые от \`Exception\`:
 \`\`\`python
-class InsufficientFundsError(Exception):
-    """Исключение при нехватке средств на карте."""
+class CapacityExceededError(Exception):
+    """Превышена максимальная вместимость автобуса."""
     pass
 
-class CardBlockedError(Exception):
-    """Исключение при попытке операции с заблокированной картой."""
+class InsufficientFundsError(Exception):
+    """Недостаточно средств на балансе карты."""
+    pass
+
+class TicketExpiredError(Exception):
+    """Срок действия разового билета (60 минут) истек."""
     pass
 \`\`\`
 `,
@@ -145,292 +149,364 @@ class CardBlockedError(Exception):
     {
       id: 'qc-1',
       question:
-        'Зачем в Python принято использовать префикс с одним подчеркиванием (например, self._balance)?',
+        'Какую роль в Python играет префикс с одним подчеркиванием перед именем атрибута (например, self._current_passengers)?',
       options: [
-        'Чтобы интерпретатор Python вызывал ошибку SyntaxError при любой попытке доступа',
-        'Это общепринятое соглашение (convention), сигнализирующее, что атрибут является внутренней деталью реализации и защищен от прямого внешнего изменения',
-        'Чтобы атрибут автоматически сохранялся в локальную базу данных',
-        'Это специальный синтаксис для создания многопоточных защищенных переменных',
+        'Интерпретатор Python блокирует любой доступ к этому полю на уровне языка',
+        'Это соглашение разработчиков (PEP 8), сигнализирующее, что атрибут является внутренней деталью реализации и не должен изменяться напрямую',
+        'Это специальный синтаксис для сохранения переменной в базу данных',
+        'Это способ ускорить доступ к переменной в памяти CPython',
       ],
       correctOptionIndex: 1,
       explanation:
-        'В Python нет аппаратного ключевого слова private на уровне CPython. Префикс с одним подчеркиванием — общепринятый стандарт инкапсуляции в сообществе Python (PEP 8), требующий обращаться к данным только через методы и свойства.',
+        'В Python нет аппаратного модификатора private. Префикс с одним подчеркиванием — общепринятый стандарт сообщества (PEP 8), обозначающий инкапсулированное защищенное состояние объекта.',
     },
     {
       id: 'qc-2',
       question:
-        'Почему для расчетов баланса в транспортной системе Avtobys строго необходим Decimal вместо float?',
+        'Почему расчеты тарифов и баланса в транспортной системе должны выполняться в Decimal, а не во float?',
       options: [
-        'Потому что float работает медленнее при сложении',
-        'Потому что числа float не поддерживают работу в браузере с Pyodide',
-        'Числа float подвержены ошибкам двоичного округления (например, 0.1 + 0.2 != 0.3), что приводит к финансовым потерям в биллинге',
-        'Потому что float не может хранить числа больше 1000',
+        'Потому что float работает медленнее в циклах',
+        'Потому что числа float подвержены ошибкам двоичного округления (например, 0.1 + 0.2 != 0.3), что приводит к финансовым искажениям',
+        'Потому что модуль decimal является обязательным требованием компилятора WebAssembly',
+        'Потому что тип float не поддерживает отрицательные числа',
       ],
-      correctOptionIndex: 2,
+      correctOptionIndex: 1,
       explanation:
-        'Двоичный формат IEEE 754 не может точно представить многие десятичные дроби (например, 0.1 или 0.05). Класс Decimal реализует точную десятичную арифметику фиксированной точности, что является обязательным стандартом финтеха.',
+        'Двоичный формат IEEE 754 не может точно выразить многие десятичные дроби. Для биллинга и платежей стандартом является класс decimal.Decimal с точной фиксированной арифметикой.',
     },
     {
       id: 'qc-3',
-      question:
-        'В чем заключается преимущество соблюдения принципа «Tell, Don’t Ask» (Приказывай, а не спрашивай)?',
+      question: 'В чем ключевая суть принципа «Tell, Don’t Ask» (Приказывай, а не спрашивай)?',
       options: [
-        'Объект сам управляет своими данными и защищает инварианты, вместо того чтобы внешний код вытаскивал данные и манипулировал ими',
-        'Все функции должны быть написаны в императивном стиле без использования возвращаемых значений',
-        'Класс должен содержать только сеттеры без методов чтения',
-        'Пользователь должен всегда вводить команды через интерактивный терминал',
+        'Все методы объекта должны принимать только строковые команды',
+        'Объект сам управляет своими данными и защищает инварианты в своих методах, вместо того чтобы внешний код извлекал данные и манипулировал ими',
+        'В коде запрещено использовать оператор return',
+        'Пользователь должен передавать аргументы только через системный терминал',
       ],
-      correctOptionIndex: 0,
+      correctOptionIndex: 1,
       explanation:
-        'Принцип «Tell, Don’t Ask» защищает от антипаттерна «Анемичная модель». Объект сам выполняет операцию (например, card.charge_fare(fare)), проверяет блокировку и баланс, гарантируя целостность данных в одном месте.',
+        'Принцип «Tell, Don’t Ask» предотвращает анемичность модели: вместо проверки условий снаружи (bus.current_passengers < bus.capacity) вы вызываете метод (bus.board_passengers(n)), а объект сам гарантирует свою целостность.',
     },
     {
       id: 'qc-4',
-      question: 'Что такое инвариант класса в ООП?',
+      question: 'Что такое инвариант класса?',
       options: [
-        'Функция, которая не может принимать аргументы',
-        'Переменная, которую можно объявить только в глобальной области видимости',
-        'Условие целостности состояния объекта, которое всегда должно быть истинным после конструктора и любого метода',
-        'Специальный декоратор для ускорения выполнения кода',
+        'Глобальная константа модуля',
+        'Условие корректности состояния объекта, которое всегда выполняется после завершения конструктора и любого метода',
+        'Метод, который никогда не возвращает значения',
+        'Переменная, объявленная внутри блока try-except',
       ],
-      correctOptionIndex: 2,
+      correctOptionIndex: 1,
       explanation:
-        'Инвариант класса (например: balance >= 0, скидка в пределах 0..1) гарантирует, что объект никогда не окажется в испорченном или невалидном состоянии.',
+        'Инвариант гарантирует, что объект невозможно перевести в испорченное, недопустимое с точки зрения бизнес-логики состояние (например, отрицательное число пассажиров или отрицательный баланс карты).',
     },
   ],
 };
 
 export const week1PracticeTask: CodeTask = {
-  id: 'week-1-practice-transit-card',
-  title: 'Практика: Класс TransitCard с защитой инвариантов',
+  id: 'week-1-practice-bus-route',
+  title: 'Практика: Моделирование Bus и Route с защитой инвариантов',
   scorePoints: 15,
-  descriptionMarkdown: `## Практическое задание: Класс TransitCard
+  descriptionMarkdown: `## Практическое задание: Классы Route и Bus (Лабораторная №1, Блок 1)
 
-Вам предстоит спроектировать богатую объектную модель (Rich Domain Model) транспортной карты системы **Avtobys**.
+Вам предстоит спроектировать ядро транспортной модели **Avtobys**: маршрут следования (\`Route\`) и городской автобус (\`Bus\`).
 
-### Бизнес-требования и инварианты:
+### 1. Сущность \`Route\` (Маршрут):
+- **Конструктор:** \`__init__(self, route_number: str, stops: list[str], base_fare: Decimal = Decimal("100.00"))\`
+  - \`route_number\`: непустая строка. Если строка пустая или состоит из одних пробелов — выбросить \`ValueError\`.
+  - \`base_fare\`: базовая стоимость проезда в тенге (\`Decimal\`). Должна быть строго больше нуля (\`base_fare > Decimal("0.00")\`), иначе выбросить \`ValueError\`.
+  - \`stops\`: упорядоченный список названий остановок (\`list[str]\`).
+    - Минимум 2 остановки (начальная и конечная). Если меньше 2 — выбросить \`ValueError\`.
+    - Названия остановок не могут дублироваться подряд (например, \`["Абая", "Абая"]\` недопустимо) — выбросить \`ValueError\`.
+- **Свойства (Read-Only):**
+  - \`@property route_number -> str\`
+  - \`@property base_fare -> Decimal\`
+  - \`@property stops -> list[str]\` (возвращает копию списка остановок).
 
-1. **Исключения предметной области:**
-   - \`InsufficientFundsError(Exception)\` — выбрасывается при нехватке средств для списания.
-   - \`CardBlockedError(Exception)\` — выбрасывается при любой попытке списания или пополнения заблокированной карты.
+---
 
-2. **Класс \`TransitCard\`:**
-   - **Конструктор:** \`__init__(self, card_id: str, initial_balance: Decimal = Decimal("0.00"), discount_rate: Decimal = Decimal("0.00"))\`
-     - \`card_id\`: непустая строка. Если строка пустая или состоит только из пробелов — выбросить \`ValueError\`.
-     - \`initial_balance\`: неотрицательное число (\`initial_balance >= Decimal("0.00")\`). Иначе — выбросить \`ValueError\`.
-     - \`discount_rate\`: коэффициент скидки в диапазоне \`[Decimal("0.00"), Decimal("1.00")]\` (0.0 — без скидки, 0.5 — студенческая 50%, 1.0 — бесплатный проезд). Иначе — выбросить \`ValueError\`.
-     - Начальный статус блокировки: \`_is_blocked = False\`.
-   - **Свойства (Read-Only Properties):**
-     - \`@property card_id -> str\`
-     - \`@property balance -> Decimal\`
-     - \`@property discount_rate -> Decimal\`
-     - \`@property is_blocked -> bool\`
-   - **Метод \`top_up(self, amount: Decimal) -> None\`:**
-     - Защита инварианта: если карта заблокирована, выбросить \`CardBlockedError\`.
-     - Минимальная сумма пополнения — **100.00 KZT**. Если \`amount < Decimal("100.00")\`, выбросить \`ValueError\`.
-     - Увеличивает баланс на переданную сумму.
-   - **Метод \`charge_fare(self, base_fare: Decimal) -> Decimal\`:**
-     - Если карта заблокирована, выбросить \`CardBlockedError\`.
-     - Базовый тариф должен быть строго положительным (\`base_fare > Decimal("0.00")\`), иначе выбросить \`ValueError\`.
-     - Рассчитать фактический тариф с учетом скидки:
-       \`effective_fare = base_fare * (Decimal("1.00") - self._discount_rate)\`
-     - Если на балансе недостаточно средств (\`self._balance < effective_fare\`), выбросить \`InsufficientFundsError\`. **При этом баланс карты не должен измениться!**
-     - Списать \`effective_fare\` с баланса и вернуть списанную сумму.
-   - **Методы управления блокировкой:**
-     - \`block(self, reason: str = "") -> None\` — устанавливает \`_is_blocked = True\`.
-     - \`unblock(self) -> None\` — устанавливает \`_is_blocked = False\`.
+### 2. Исключение \`CapacityExceededError\`:
+- Пользовательское исключение: \`class CapacityExceededError(Exception): pass\`.
+- Выбрасывается при попытке посадки пассажиров сверх установленной вместимости.
+
+---
+
+### 3. Сущность \`Bus\` (Автобус):
+- **Конструктор:** \`__init__(self, plate_number: str, capacity: int)\`
+  - \`plate_number\`: государственный номер (например, \`"123 AB 02"\`). Непустая строка без лишних крайних пробелов (иначе \`ValueError\`).
+  - \`capacity\`: максимальная вместимость (целое число от 10 до 250 человек включительно). Иначе выбросить \`ValueError\`.
+  - Начальное количество пассажиров в салоне: \`_current_passengers = 0\`.
+  - Начальный назначенный маршрут: \`_route = None\`.
+- **Свойства (Read-Only):**
+  - \`@property plate_number -> str\`
+  - \`@property capacity -> int\`
+  - \`@property current_passengers -> int\`
+  - \`@property route -> Route | None\`
+- **Методы:**
+  - \`assign_route(self, route: Route) -> None\`: привязать маршрут к автобусу. Если передан не объект \`Route\` — выбросить \`TypeError\`.
+  - \`board_passengers(self, count: int) -> None\`:
+    - \`count\` должен быть строго положительным (\`count > 0\`), иначе \`ValueError\`.
+    - Если \`self._current_passengers + count > self._capacity\` — выбросить \`CapacityExceededError\`.
+    - **Важно:** при возникновении ошибки число пассажиров в салоне не должно измениться!
+  - \`leave_passengers(self, count: int) -> None\`:
+    - \`count\` должен быть строго положительным (\`count > 0\`), иначе \`ValueError\`.
+    - Если \`count > self._current_passengers\` — выбросить \`ValueError\`.
+    - Уменьшить \`_current_passengers\` на \`count\`.
 `,
   starterCode: `from decimal import Decimal
 
 
-class InsufficientFundsError(Exception):
-    """Исключение при нехватке средств на карте."""
+class CapacityExceededError(Exception):
+    """Выбрасывается при превышении максимальной вместимости автобуса."""
     pass
 
 
-class CardBlockedError(Exception):
-    """Исключение при попытке операции с заблокированной картой."""
-    pass
-
-
-class TransitCard:
+class Route:
     """
-    Транспортная карта платежной системы Avtobys.
-    Гарантирует защиту бизнес-инвариантов баланса, скидок и статуса блокировки.
+    Маршрут городского транспорта Avtobys.
+    Гарантирует валидность номера маршрута, базового тарифа и списка остановок.
     """
-
-    MIN_TOP_UP_AMOUNT = Decimal("100.00")
 
     def __init__(
         self,
-        card_id: str,
-        initial_balance: Decimal = Decimal("0.00"),
-        discount_rate: Decimal = Decimal("0.00")
+        route_number: str,
+        stops: list[str],
+        base_fare: Decimal = Decimal("100.00")
     ):
-        # TODO: Реализуйте валидацию card_id, initial_balance, discount_rate
-        # и сохраните защищенные атрибуты _card_id, _balance, _discount_rate, _is_blocked
+        # TODO: Проверьте инварианты route_number, base_fare и stops
+        # и сохраните защищенные атрибуты _route_number, _base_fare, _stops
         pass
 
     @property
-    def card_id(self) -> str:
-        # TODO: Верните идентификатор карты
+    def route_number(self) -> str:
+        # TODO: Верните номер маршрута
         pass
 
     @property
-    def balance(self) -> Decimal:
-        # TODO: Верните текущий баланс карты
+    def base_fare(self) -> Decimal:
+        # TODO: Верните базовый тариф (Decimal)
         pass
 
     @property
-    def discount_rate(self) -> Decimal:
-        # TODO: Верните персональную скидку
+    def stops(self) -> list[str]:
+        # TODO: Верните список остановок
+        pass
+
+
+class Bus:
+    """
+    Городской автобус Avtobys с контролем вместимости и привязкой к маршруту.
+    """
+
+    MIN_CAPACITY = 10
+    MAX_CAPACITY = 250
+
+    def __init__(self, plate_number: str, capacity: int):
+        # TODO: Проверьте plate_number и capacity в диапазоне [10; 250]
+        # Сохраните _plate_number, _capacity, _current_passengers = 0, _route = None
         pass
 
     @property
-    def is_blocked(self) -> bool:
-        # TODO: Верните статус блокировки
+    def plate_number(self) -> str:
         pass
 
-    def block(self, reason: str = "") -> None:
-        # TODO: Установите флаг блокировки в True
+    @property
+    def capacity(self) -> int:
         pass
 
-    def unblock(self) -> None:
-        # TODO: Установите флаг блокировки в False
+    @property
+    def current_passengers(self) -> int:
         pass
 
-    def top_up(self, amount: Decimal) -> None:
-        # TODO: Проверьте блокировку и минимальную сумму пополнения, затем увеличьте баланс
+    @property
+    def route(self) -> Route | None:
         pass
 
-    def charge_fare(self, base_fare: Decimal) -> Decimal:
-        # TODO: Проверьте блокировку, валидность base_fare, рассчитайте effective_fare,
-        # проверьте нехватку средств и выполните списание. Верните списанную сумму.
+    def assign_route(self, route: Route) -> None:
+        # TODO: Проверьте тип route и сохраните в _route
+        pass
+
+    def board_passengers(self, count: int) -> None:
+        # TODO: Проверьте count > 0, защитите вместимость от переполнения (CapacityExceededError)
+        pass
+
+    def leave_passengers(self, count: int) -> None:
+        # TODO: Проверьте count > 0 и count <= current_passengers
         pass
 `,
   testCode: `from decimal import Decimal
 
-# 1. Проверка инициализации и свойств
-card = TransitCard("KZ-001", Decimal("500.00"), Decimal("0.20"))
-assert card.card_id == "KZ-001", "Свойство card_id должно возвращать переданный ID"
-assert card.balance == Decimal("500.00"), "Свойство balance должно возвращать начальный баланс"
-assert card.discount_rate == Decimal("0.20"), "Свойство discount_rate должно возвращать скидку"
-assert card.is_blocked is False, "Новая карта по умолчанию должна быть активна (is_blocked == False)"
-print("[OK] Test 1: Инициализация карты и геттеры свойств")
+# --- 1. Тестирование сущности Route ---
+stops = ["Вокзал 1", "ЦУМ", "Парк Горького", "Медео"]
+route = Route("32", stops, Decimal("120.00"))
 
-# 2. Валидация входных параметров в конструкторе
+assert route.route_number == "32", "Номер маршрута должен быть '32'"
+assert route.base_fare == Decimal("120.00"), "Базовый тариф должен быть 120.00"
+assert route.stops == stops, "Список остановок должен совпадать"
+print("[OK] Test 1: Инициализация Route и геттеры свойств")
+
+# Валидация Route
 try:
-    TransitCard("", Decimal("100.00"))
-    assert False, "Пустой card_id должен вызывать ValueError"
+    Route("", ["A", "B"])
+    assert False, "Пустой route_number должен вызывать ValueError"
 except ValueError:
     pass
 
 try:
-    TransitCard("KZ-002", Decimal("-50.00"))
-    assert False, "Отрицательный баланс должен вызывать ValueError"
+    Route("12", ["A", "B"], Decimal("0.00"))
+    assert False, "Тариф <= 0 должен вызывать ValueError"
 except ValueError:
     pass
 
 try:
-    TransitCard("KZ-003", Decimal("0.00"), Decimal("1.50"))
-    assert False, "Скидка больше 1.0 должна вызывать ValueError"
+    Route("12", ["Только одна"])
+    assert False, "Менее 2 остановок должно вызывать ValueError"
 except ValueError:
     pass
-print("[OK] Test 2: Защита инвариантов в конструкторе (ValueError)")
-
-# 3. Пополнение баланса (top_up)
-card.top_up(Decimal("200.00"))
-assert card.balance == Decimal("700.00"), f"Баланс после пополнения должен быть 700.00, получено {card.balance}"
 
 try:
-    card.top_up(Decimal("50.00")) # Меньше минимальных 100 KZT
-    assert False, "Пополнение меньше 100 KZT должно вызывать ValueError"
+    Route("12", ["Абая", "Абая", "Саина"])
+    assert False, "Подряд дублирующиеся остановки должны вызывать ValueError"
 except ValueError:
     pass
-assert card.balance == Decimal("700.00"), "Баланс не должен меняться при отклоненном пополнении"
-print("[OK] Test 3: Пополнение баланса и проверка минимальной суммы (100 KZT)")
+print("[OK] Test 2: Защита инвариантов Route (номер, тариф, остановки)")
 
-# 4. Списание за проезд с учетом скидки (charge_fare)
-# Базовый тариф 100.00 KZT, скидка 20% -> списание 80.00 KZT
-charged = card.charge_fare(Decimal("100.00"))
-assert charged == Decimal("80.00"), f"Списано должно быть 80.00 KZT, получено {charged}"
-assert card.balance == Decimal("620.00"), f"Остаток на карте должен быть 620.00 KZT, получено {card.balance}"
-print("[OK] Test 4: Корректное списание проезда с учетом скидки")
+# --- 2. Тестирование сущности Bus ---
+bus = Bus("123 AB 02", 50)
+assert bus.plate_number == "123 AB 02"
+assert bus.capacity == 50
+assert bus.current_passengers == 0
+assert bus.route is None
+print("[OK] Test 3: Инициализация Bus и начальное состояние")
 
-# 5. Проверка нехватки средств (InsufficientFundsError)
-small_card = TransitCard("KZ-SMALL", Decimal("50.00"))
+# Валидация Bus
 try:
-    small_card.charge_fare(Decimal("100.00"))
-    assert False, "Списание при нехватке средств должно вызывать InsufficientFundsError"
-except InsufficientFundsError:
-    pass
-assert small_card.balance == Decimal("50.00"), "Баланс не должен уменьшаться при ошибке нехватки средств"
-print("[OK] Test 5: Защита от отрицательного баланса (InsufficientFundsError)")
-
-# 6. Блокировка и разблокировка карты
-card.block("Утеря карты")
-assert card.is_blocked is True, "Карта должна иметь статус is_blocked == True"
-
-try:
-    card.charge_fare(Decimal("100.00"))
-    assert False, "Списание с заблокированной карты должно вызывать CardBlockedError"
-except CardBlockedError:
+    Bus("", 50)
+    assert False, "Пустой госномер должен вызывать ValueError"
+except ValueError:
     pass
 
 try:
-    card.top_up(Decimal("500.00"))
-    assert False, "Пополнение заблокированной карты должно вызывать CardBlockedError"
-except CardBlockedError:
+    Bus("123 AB 02", 5)  # Меньше 10
+    assert False, "Вместимость < 10 должна вызывать ValueError"
+except ValueError:
     pass
 
-card.unblock()
-assert card.is_blocked is False, "Карта должна разблокироваться после unblock()"
-card.top_up(Decimal("100.00"))
-assert card.balance == Decimal("720.00"), "После разблокировки операции должны успешно выполняться"
-print("[OK] Test 6: Управление блокировкой и запрет операций с заблокированной картой")
+try:
+    Bus("123 AB 02", 300)  # Больше 250
+    assert False, "Вместимость > 250 должна вызывать ValueError"
+except ValueError:
+    pass
+print("[OK] Test 4: Валидация госномера и диапазона вместимости Bus [10; 250]")
 
-print("[OK] Все тесты пройдены! (+15 баллов)")
+# Привязка маршрута
+bus.assign_route(route)
+assert bus.route is route, "Маршрут должен быть успешно привязан"
+try:
+    bus.assign_route("Не маршрут")
+    assert False, "Привязка не-Route должна вызывать TypeError"
+except TypeError:
+    pass
+print("[OK] Test 5: Привязка маршрута assign_route с проверкой типов")
+
+# Посадка пассажиров и защита вместимости
+bus.board_passengers(30)
+assert bus.current_passengers == 30, f"Ожидалось 30 пассажиров, получено {bus.current_passengers}"
+
+try:
+    bus.board_passengers(25)  # 30 + 25 = 55 > 50!
+    assert False, "Превышение вместимости должно вызывать CapacityExceededError"
+except CapacityExceededError:
+    pass
+
+assert bus.current_passengers == 30, "Число пассажиров не должно измениться при сбое посадки"
+print("[OK] Test 6: Защита от переполнения салона (CapacityExceededError)")
+
+# Высадка пассажиров
+bus.leave_passengers(10)
+assert bus.current_passengers == 20
+
+try:
+    bus.leave_passengers(25)  # Попытка высадить больше, чем есть
+    assert False, "Высадка большего числа пассажиров должна вызывать ValueError"
+except ValueError:
+    pass
+
+assert bus.current_passengers == 20
+print("[OK] Test 7: Высадка пассажиров и защита от отрицательного остатка")
+
+print("[OK] Все тесты первой практической задачи успешно пройдены! (+15 баллов)")
 `,
   hints: [
-    'В конструкторе проверьте: not card_id or not card_id.strip() -> raise ValueError(...)',
-    'Для расчета списания с учетом скидки: effective_fare = base_fare * (Decimal("1.00") - self._discount_rate)',
-    'Не забудьте проверить self._is_blocked в начале методов top_up и charge_fare и выбросить CardBlockedError.',
-    'Если self._balance < effective_fare, выбросите InsufficientFundsError до модификации _balance.',
+    'В Route проверьте: not route_number or not route_number.strip() -> raise ValueError.',
+    'Для проверки остановок: len(stops) < 2 или any(stops[i] == stops[i+1] for i in range(len(stops)-1)).',
+    'В Bus capacity должна быть: not (10 <= capacity <= 250) -> raise ValueError.',
+    'В board_passengers: если self._current_passengers + count > self._capacity, выбросите CapacityExceededError ДО изменения _current_passengers.',
   ],
 };
 
 export const week1HomeworkTask: CodeTask = {
-  id: 'week-1-homework-passenger',
-  title: 'Домашнее задание: Сущность Passenger и привязка карт',
+  id: 'week-1-homework-card-ticket',
+  title: 'Домашнее задание: TransitCard и электронный разовый билет SingleTripTicket',
   scorePoints: 10,
-  descriptionMarkdown: `## Домашнее задание: Сущность Passenger и привязка карт
+  descriptionMarkdown: `## Домашнее задание: Оплата проезда в Avtobys (Лабораторная №1, Блок 2)
 
-Во второй задаче мы моделируем сущность **Пассажир (Passenger)**, который пользуется транспортной картой **TransitCard**.
+Во второй задаче мы моделируем объектную систему оплаты проезда: транспортную карту (\`TransitCard\`) с защитой баланса и электронный разовый билет (\`SingleTripTicket\`).
 
-### Бизнес-требования:
+---
 
-1. **Класс \`Passenger\`:**
-   - **Конструктор:** \`__init__(self, passenger_id: str, full_name: str, card: TransitCard | None = None)\`
-     - \`passenger_id\` и \`full_name\`: непустые строки (иначе выбросить \`ValueError\`).
-     - \`card\`: опциональный объект карты. Если передан — привязать через метод \`link_card(card)\`.
-   - **Свойства (Read-Only Properties):**
-     - \`@property passenger_id -> str\`
-     - \`@property full_name -> str\`
-     - \`@property card -> TransitCard | None\`
-   - **Метод \`link_card(self, card: TransitCard) -> None\`:**
-     - Проверить, что \`card\` является экземпляром \`TransitCard\` (иначе выбросить \`TypeError\`).
-     - Если передаваемая карта заблокирована (\`card.is_blocked\`), привязка запрещена — выбросить \`CardBlockedError\`.
-     - Сохранить карту в \`_card\`.
-   - **Метод \`unlink_card(self) -> None\`:**
-     - Отвязать текущую карту (\`self._card = None\`).
-   - **Метод \`pay_trip(self, base_fare: Decimal) -> Decimal\`:**
-     - Если карта не привязана (\`self._card is None\`), выбросить \`ValueError("У пассажира нет привязанной карты")\`.
-     - Делегировать списание карте: вызвать \`self._card.charge_fare(base_fare)\`.
-     - Вернуть фактически списанную сумму.
+### 1. Сущность \`TransitCard\` (Транспортная карта):
+- **Исключения:**
+  - \`InsufficientFundsError(Exception)\` — нехватка средств для оплаты.
+  - \`CardBlockedError(Exception)\` — попытка операции с заблокированной картой.
+- **Конструктор:** \`__init__(self, card_id: str, balance: Decimal = Decimal("0.00"), discount_rate: Decimal = Decimal("0.00"))\`
+  - \`card_id\`: непустая строка (иначе \`ValueError\`).
+  - \`balance\`: \`balance >= Decimal("0.00")\` (иначе \`ValueError\`).
+  - \`discount_rate\`: в диапазоне \`[Decimal("0.00"), Decimal("1.00")]\` (0.0 — стандарт, 0.5 — студент, 1.0 — бесплатный) (иначе \`ValueError\`).
+  - Статус блокировки: \`_is_blocked = False\`.
+- **Свойства (Read-Only):**
+  - \`@property card_id -> str\`
+  - \`@property balance -> Decimal\`
+  - \`@property discount_rate -> Decimal\`
+  - \`@property is_blocked -> bool\`
+- **Методы:**
+  - \`top_up(self, amount: Decimal) -> None\`: пополнение карты. Если заблокирована — \`CardBlockedError\`. Минимальная сумма — **100.00 KZT** (если \`amount < Decimal("100.00")\` — \`ValueError\`).
+  - \`pay(self, fare: Decimal) -> Decimal\`: оплата проезда с учетом скидки.
+    - Если заблокирована — \`CardBlockedError\`.
+    - \`fare > Decimal("0.00")\`, иначе \`ValueError\`.
+    - Фактическая стоимость: \`effective_fare = fare * (Decimal("1.00") - self._discount_rate)\`.
+    - Если \`self._balance < effective_fare\` — выбросить \`InsufficientFundsError\` (баланс не меняется!).
+    - Списать \`effective_fare\` и вернуть списанную сумму.
+  - \`block(self, reason: str = "") -> None\`: \`_is_blocked = True\`.
+  - \`unblock(self) -> None\`: \`_is_blocked = False\`.
 
-*Класс \`TransitCard\` и исключения из предыдущей задачи уже включены в шаблон кода.*
+---
+
+### 2. Сущность \`SingleTripTicket\` (Разовый билет):
+Разовый билет приобретается по QR/SMS и имеет жесткий срок действия.
+- **Исключения:**
+  - \`TicketAlreadyUsedError(Exception)\` — билет уже был использован ранее.
+  - \`TicketExpiredError(Exception)\` — истек 60-минутный срок действия билета.
+- **Конструктор:** \`__init__(self, ticket_code: str, price: Decimal, issued_at: datetime)\`
+  - \`ticket_code\`: непустая строка (иначе \`ValueError\`).
+  - \`price\`: строго положительная сумма (\`price > Decimal("0.00")\`, иначе \`ValueError\`).
+  - \`issued_at\`: объект \`datetime\` момента покупки.
+  - Начальный статус валидации: \`_is_validated = False\`.
+  - Начальный валидировавший автобус: \`_validated_bus = None\`.
+- **Свойства (Read-Only):**
+  - \`@property ticket_code -> str\`
+  - \`@property price -> Decimal\`
+  - \`@property issued_at -> datetime\`
+  - \`@property is_validated -> bool\`
+  - \`@property validated_bus -> Bus | None\`
+- **Метод \`validate(self, bus: Bus, current_time: datetime) -> None\`:**
+  - \`bus\` должен быть экземпляром \`Bus\` (иначе \`TypeError\`).
+  - Если билет уже валидирован (\`self._is_validated is True\`) — выбросить \`TicketAlreadyUsedError\`.
+  - Срок действия: если разница \`(current_time - self._issued_at).total_seconds() > 3600\` (более 60 минут) — выбросить \`TicketExpiredError\`.
+  - При успехе: установить \`_is_validated = True\`, \`_validated_bus = bus\`.
 `,
   starterCode: `from decimal import Decimal
+from datetime import datetime, timedelta
 
 
 class InsufficientFundsError(Exception):
@@ -441,184 +517,196 @@ class CardBlockedError(Exception):
     pass
 
 
+class TicketAlreadyUsedError(Exception):
+    pass
+
+
+class TicketExpiredError(Exception):
+    pass
+
+
 class TransitCard:
+    """
+    Транспортная карта Avtobys с защитой баланса и скидок.
+    """
+
     MIN_TOP_UP_AMOUNT = Decimal("100.00")
 
     def __init__(
         self,
         card_id: str,
-        initial_balance: Decimal = Decimal("0.00"),
+        balance: Decimal = Decimal("0.00"),
         discount_rate: Decimal = Decimal("0.00")
     ):
-        if not card_id or not card_id.strip():
-            raise ValueError("ID карты не может быть пустым")
-        if initial_balance < Decimal("0.00"):
-            raise ValueError("Баланс не может быть отрицательным")
-        if discount_rate < Decimal("0.00") or discount_rate > Decimal("1.00"):
-            raise ValueError("Скидка должна быть в [0.0; 1.0]")
-        self._card_id = card_id.strip()
-        self._balance = initial_balance
-        self._discount_rate = discount_rate
-        self._is_blocked = False
+        # TODO: Реализуйте валидацию card_id, balance, discount_rate
+        pass
 
     @property
     def card_id(self) -> str:
-        return self._card_id
+        pass
 
     @property
     def balance(self) -> Decimal:
-        return self._balance
+        pass
 
     @property
     def discount_rate(self) -> Decimal:
-        return self._discount_rate
+        pass
 
     @property
     def is_blocked(self) -> bool:
-        return self._is_blocked
-
-    def block(self, reason: str = "") -> None:
-        self._is_blocked = True
-
-    def unblock(self) -> None:
-        self._is_blocked = False
+        pass
 
     def top_up(self, amount: Decimal) -> None:
-        if self._is_blocked:
-            raise CardBlockedError("Карта заблокирована")
-        if amount < self.MIN_TOP_UP_AMOUNT:
-            raise ValueError("Минимум 100 KZT")
-        self._balance += amount
+        # TODO: Проверьте блокировку и минимальную сумму пополнения 100 KZT
+        pass
 
-    def charge_fare(self, base_fare: Decimal) -> Decimal:
-        if self._is_blocked:
-            raise CardBlockedError("Карта заблокирована")
-        if base_fare <= Decimal("0.00"):
-            raise ValueError("Тариф должен быть > 0")
-        effective = base_fare * (Decimal("1.00") - self._discount_rate)
-        if self._balance < effective:
-            raise InsufficientFundsError("Недостаточно средств")
-        self._balance -= effective
-        return effective
+    def pay(self, fare: Decimal) -> Decimal:
+        # TODO: Проверьте блокировку, рассчитайте effective_fare,
+        # проверьте нехватку средств и выполните списание. Верните списанную сумму.
+        pass
+
+    def block(self, reason: str = "") -> None:
+        pass
+
+    def unblock(self) -> None:
+        pass
 
 
-class Passenger:
+class SingleTripTicket:
     """
-    Пассажир транспортной системы Avtobys.
-    Управляет привязанной картой и оплатой поездок.
+    Электронный разовый билет с ограничением по времени (60 минут) и защитой от повторной валидации.
     """
 
-    def __init__(self, passenger_id: str, full_name: str, card: TransitCard | None = None):
-        # TODO: Проверьте валидность passenger_id и full_name (не пустые строки)
-        # Сохраните _passenger_id, _full_name, _card
-        # Если передан card, используйте self.link_card(card)
+    VALIDITY_SECONDS = 3600
+
+    def __init__(self, ticket_code: str, price: Decimal, issued_at: datetime):
+        # TODO: Проверьте ticket_code, price > 0, сохраните issued_at
+        # Инициализируйте _is_validated = False, _validated_bus = None
         pass
 
     @property
-    def passenger_id(self) -> str:
-        # TODO: Верните ID пассажира
+    def ticket_code(self) -> str:
         pass
 
     @property
-    def full_name(self) -> str:
-        # TODO: Верните ФИО пассажира
+    def price(self) -> Decimal:
         pass
 
     @property
-    def card(self) -> TransitCard | None:
-        # TODO: Верните привязанную карту
+    def issued_at(self) -> datetime:
         pass
 
-    def link_card(self, card: TransitCard) -> None:
-        # TODO: Проверьте isinstance(card, TransitCard) (TypeError)
-        # и card.is_blocked (CardBlockedError). Привяжите карту.
+    @property
+    def is_validated(self) -> bool:
         pass
 
-    def unlink_card(self) -> None:
-        # TODO: Отвяжите карту (установите self._card = None)
+    @property
+    def validated_bus:
         pass
 
-    def pay_trip(self, base_fare: Decimal) -> Decimal:
-        # TODO: Если self._card is None -> raise ValueError
-        # Делегируйте списание карте через self._card.charge_fare(base_fare)
+    def validate(self, bus, current_time: datetime) -> None:
+        # TODO: Проверьте, что bus имеет атрибут plate_number
+        # Проверьте повторное использование (TicketAlreadyUsedError)
+        # Проверьте срок действия (TicketExpiredError)
+        # Установите статус валидации и привяжите автобус
         pass
 `,
   testCode: `from decimal import Decimal
+from datetime import datetime, timedelta
 
-# 1. Проверка создания пассажира
-p1 = Passenger("P-101", "Алихан Смаилов")
-assert p1.passenger_id == "P-101", "passenger_id должен возвращать переданный ID"
-assert p1.full_name == "Алихан Смаилов", "full_name должен возвращать переданное имя"
-assert p1.card is None, "По умолчанию у пассажира нет привязанной карты (None)"
-print("[OK] Test 1: Инициализация пассажира без карты")
+# --- 1. Тестирование TransitCard ---
+card = TransitCard("KZ-100", Decimal("500.00"), Decimal("0.50"))
+assert card.card_id == "KZ-100"
+assert card.balance == Decimal("500.00")
+assert card.discount_rate == Decimal("0.50")
+assert card.is_blocked is False
+print("[OK] Test 1: Инициализация TransitCard со студенческой скидкой 50%")
 
-# 2. Валидация входных данных
+# Пополнение карты
+card.top_up(Decimal("200.00"))
+assert card.balance == Decimal("700.00")
+
 try:
-    Passenger("", "Иван")
-    assert False, "Пустой passenger_id должен вызывать ValueError"
+    card.top_up(Decimal("50.00"))  # Меньше 100
+    assert False, "Пополнение меньше 100 KZT должно вызывать ValueError"
 except ValueError:
     pass
+print("[OK] Test 2: Пополнение баланса с защитой минимальной суммы (100 KZT)")
 
+# Оплата проезда с учетом скидки (тариф 100 KZT -> списание 50 KZT)
+paid = card.pay(Decimal("100.00"))
+assert paid == Decimal("50.00"), f"Ожидалось списание 50.00, получено {paid}"
+assert card.balance == Decimal("650.00"), f"Остаток должен быть 650.00, получено {card.balance}"
+print("[OK] Test 3: Оплата проезда pay() с расчетом льготного тарифа")
+
+# Защита от отрицательного баланса
 try:
-    Passenger("P-102", "   ")
-    assert False, "Пустое имя passenger_name должно вызывать ValueError"
-except ValueError:
+    card.pay(Decimal("2000.00"))
+    assert False, "Нехватка средств должна вызывать InsufficientFundsError"
+except InsufficientFundsError:
     pass
-print("[OK] Test 2: Валидация параметров конструктора Passenger (ValueError)")
+assert card.balance == Decimal("650.00"), "Баланс не должен меняться при сбое списания"
+print("[OK] Test 4: Защита от отрицательного баланса (InsufficientFundsError)")
 
-# 3. Попытка оплаты без привязанной карты
+# Блокировка карты
+card.block("Утеряна")
+assert card.is_blocked is True
 try:
-    p1.pay_trip(Decimal("100.00"))
-    assert False, "Поездка без карты должна вызывать ValueError"
-except ValueError:
-    pass
-print("[OK] Test 3: Отказ в поездке без привязанной карты")
-
-# 4. Привязка карты и успешная оплата поездки
-card = TransitCard("KZ-999", Decimal("500.00"), Decimal("0.50")) # Студенческая карта 50%
-p1.link_card(card)
-assert p1.card is card, "Карта должна успешно привязаться к пассажиру"
-
-# Оплата поездки: тариф 100 KZT со скидкой 50% = 50 KZT
-cost = p1.pay_trip(Decimal("100.00"))
-assert cost == Decimal("50.00"), f"Стоимость поездки должна быть 50.00 KZT, получено {cost}"
-assert card.balance == Decimal("450.00"), f"Остаток на карте должен быть 450.00 KZT, получено {card.balance}"
-print("[OK] Test 4: Успешная привязка карты и оплата поездки со скидкой")
-
-# 5. Отвязка карты (unlink_card)
-p1.unlink_card()
-assert p1.card is None, "После unlink_card() карта должна быть None"
-try:
-    p1.pay_trip(Decimal("100.00"))
-    assert False, "После отвязки карты оплата должна быть невозможна"
-except ValueError:
-    pass
-print("[OK] Test 5: Отвязка карты и проверка блокировки оплаты")
-
-# 6. Запрет привязки заблокированной карты
-blocked_card = TransitCard("KZ-BLOCKED", Decimal("1000.00"))
-blocked_card.block("Украдена")
-try:
-    p1.link_card(blocked_card)
-    assert False, "Привязка заблокированной карты должна вызывать CardBlockedError"
+    card.pay(Decimal("50.00"))
+    assert False, "Операция с заблокированной картой должна вызывать CardBlockedError"
 except CardBlockedError:
     pass
-assert p1.card is None, "Заблокированная карта не должна привязаться"
-print("[OK] Test 6: Запрет привязки заблокированной карты (CardBlockedError)")
 
-# 7. Защита типа при привязке (TypeError)
+card.unblock()
+assert card.is_blocked is False
+print("[OK] Test 5: Блокировка и разблокировка карты (CardBlockedError)")
+
+# --- 2. Тестирование SingleTripTicket ---
+class DummyBus:
+    def __init__(self, plate):
+        self.plate_number = plate
+
+dummy_bus = DummyBus("777 KZ 02")
+now = datetime(2026, 10, 10, 12, 0, 0)
+ticket = SingleTripTicket("TCK-9999", Decimal("100.00"), now)
+
+assert ticket.ticket_code == "TCK-9999"
+assert ticket.is_validated is False
+assert ticket.validated_bus is None
+print("[OK] Test 6: Создание разового билета SingleTripTicket")
+
+# Успешная валидация через 15 минут
+valid_time = now + timedelta(minutes=15)
+ticket.validate(dummy_bus, valid_time)
+assert ticket.is_validated is True
+assert ticket.validated_bus is dummy_bus
+print("[OK] Test 7: Успешная валидация билета в автобусе")
+
+# Повторная валидация того же билета
 try:
-    p1.link_card("не_объект_карты") # type: ignore
-    assert False, "Привязка некорректного типа должна вызывать TypeError"
-except TypeError:
+    ticket.validate(dummy_bus, valid_time + timedelta(minutes=5))
+    assert False, "Повторная валидация должна вызывать TicketAlreadyUsedError"
+except TicketAlreadyUsedError:
     pass
-print("[OK] Test 7: Проверка типа объекта при привязке карты (TypeError)")
+print("[OK] Test 8: Защита от повторной валидации (TicketAlreadyUsedError)")
 
-print("[OK] Все тесты пройдены! (+10 баллов)")
+# Просроченный билет (> 60 минут)
+expired_ticket = SingleTripTicket("TCK-OLD", Decimal("100.00"), now)
+expired_time = now + timedelta(minutes=61)
+try:
+    expired_ticket.validate(dummy_bus, expired_time)
+    assert False, "Валидация через 61 минуту должна вызывать TicketExpiredError"
+except TicketExpiredError:
+    pass
+print("[OK] Test 9: Защита от использования просроченного билета (TicketExpiredError)")
+
+print("[OK] Все тесты домашнего задания успешно пройдены! (+10 баллов)")
 `,
   hints: [
-    'В методе link_card(self, card): проверьте isinstance(card, TransitCard) -> TypeError, и if card.is_blocked: raise CardBlockedError(...)',
-    'В методе pay_trip(self, base_fare): если self._card is None, вызовите raise ValueError("У пассажира нет карты")',
-    'Для делегирования оплаты вызовите: return self._card.charge_fare(base_fare)',
+    'В TransitCard: effective_fare = fare * (Decimal("1.00") - self._discount_rate).',
+    'В SingleTripTicket.validate: проверьте hasattr(bus, "plate_number") или isinstance.',
+    'Для проверки срока годности: (current_time - self._issued_at).total_seconds() > 3600 -> raise TicketExpiredError.',
+    'Не забудьте проверить self._is_validated до валидации и выбросить TicketAlreadyUsedError.',
   ],
 };

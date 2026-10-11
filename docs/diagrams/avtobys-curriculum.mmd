@@ -2,27 +2,60 @@ classDiagram
     direction TB
 
     %% Неделя 1: Инкапсуляция
+    class Route {
+        -str _route_number
+        -Decimal _base_fare
+        -list~str~ _stops
+        +str route_number
+        +Decimal base_fare
+        +list~str~ stops
+    }
+
+    class Bus {
+        -str _plate_number
+        -int _capacity
+        -int _current_passengers
+        -Route _route
+        +str plate_number
+        +int capacity
+        +int current_passengers
+        +Route route
+        +assign_route(Route route) void
+        +board_passengers(int count) void
+        +leave_passengers(int count) void
+    }
+
     class TransitCard {
         -str _card_id
         -Decimal _balance
+        -Decimal _discount_rate
         -bool _is_blocked
         +str card_id
         +Decimal balance
+        +Decimal discount_rate
         +bool is_blocked
         +top_up(Decimal amount) void
-        +deduct(Decimal amount) bool
-        +block() void
+        +pay(Decimal fare) Decimal
+        +block(str reason) void
+        +unblock() void
     }
 
-    class Passenger {
-        -str _passenger_id
-        -str _name
-        -TransitCard _card
-        +tap_card(ValidatorDevice validator) RideReceipt
-        +assign_card(TransitCard card) void
+    class SingleTripTicket {
+        -str _ticket_code
+        -Decimal _price
+        -datetime _issued_at
+        -bool _is_validated
+        -Bus _validated_bus
+        +str ticket_code
+        +Decimal price
+        +datetime issued_at
+        +bool is_validated
+        +Bus validated_bus
+        +validate(Bus bus, datetime current_time) void
     }
 
-    Passenger *-- "1" TransitCard : содержит (Инкапсуляция)
+    Bus *-- "0..1" Route : обслуживает
+    SingleTripTicket ..> Bus : валидируется в
 
     %% Неделя 2: Композиция тарифов
     class FareCalculator {

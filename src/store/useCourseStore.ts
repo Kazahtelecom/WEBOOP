@@ -78,11 +78,13 @@ export const useCourseStore = create<CourseStoreState>()(
           };
           const nextScore = Math.min(100, state.currentScore + points);
           const isExamUnlocked = nextScore >= 75;
+          const isExamCompleted = taskId === 'final-exam' ? true : state.isExamCompleted;
 
           return {
             completedTasks: nextCompletedTasks,
             currentScore: nextScore,
             isExamUnlocked,
+            isExamCompleted,
             lastUpdatedIso: new Date().toISOString(),
           };
         });

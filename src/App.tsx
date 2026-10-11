@@ -5,7 +5,6 @@ import { CodeEditor } from './components/editor/CodeEditor';
 import { TerminalView } from './components/terminal/TerminalView';
 import { useCourseStore } from './store/useCourseStore';
 import { getCourseItemById } from './data/courseData';
-import { demoTask } from './data/demoCourse';
 import type { WorkerRequest, WorkerResponse, TestResultItem } from './types/worker';
 import type { CodeTask } from './types/course';
 
@@ -34,8 +33,6 @@ export const App: React.FC = () => {
 
   if (resolvedItem?.type === 'task') {
     activeTask = resolvedItem.task;
-  } else if (currentStepId === demoTask.id) {
-    activeTask = demoTask;
   }
 
   // Получение актуального кода для текущего шага
@@ -90,8 +87,11 @@ export const App: React.FC = () => {
         });
 
         // Начисление баллов при успешном прохождении тестов
-        if (msg.payload.passed && activeTask) {
-          completeTask(msg.payload.taskId, activeTask.scorePoints);
+        if (msg.payload.passed) {
+          const item = getCourseItemById(msg.payload.taskId);
+          if (item?.type === 'task') {
+            completeTask(msg.payload.taskId, item.task.scorePoints);
+          }
         }
         return;
       }
@@ -117,7 +117,7 @@ export const App: React.FC = () => {
     // Запуск инициализации Pyodide
     const initMsg: WorkerRequest = { type: 'INIT' };
     worker.postMessage(initMsg);
-  }, [completeTask, activeTask]);
+  }, [completeTask]);
 
   useEffect(() => {
     initWorker();
@@ -226,6 +226,7 @@ export const App: React.FC = () => {
               onResetCode={handleResetCode}
               isRunning={runtimeStatus === 'running'}
               isReady={runtimeStatus === 'ready'}
+              hasTests={Boolean(activeTask?.testCode)}
             />
           </div>
 

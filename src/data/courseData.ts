@@ -12,7 +12,7 @@ export const weboopCourse: Course = {
       weekNumber: 1,
       topic: 'Классы, объекты и инкапсуляция',
       description:
-        'Моделирование транспортной карты Avtobys и пассажира: сокрытие состояния, защита инвариантов, вычисления в Decimal и принцип «Tell, Don’t Ask».',
+        'Моделирование автобусов, маршрутов, транспортных карт и разовых билетов Avtobys: сокрытие состояния, защита инвариантов вместимости, вычисления в Decimal и валидация поездок.',
       maxScore: 25,
       lecture: week1Lecture,
       practiceTasks: [week1PracticeTask],
@@ -94,6 +94,21 @@ export function getCourseItemById(
     if (week.homeworkTask.id === stepId) {
       return { type: 'task', task: week.homeworkTask };
     }
+  }
+
+  if (weboopCourse.finalExam && weboopCourse.finalExam.id === stepId) {
+    return {
+      type: 'task',
+      task: {
+        id: weboopCourse.finalExam.id,
+        title: weboopCourse.finalExam.title,
+        descriptionMarkdown: weboopCourse.finalExam.descriptionMarkdown,
+        starterCode: weboopCourse.finalExam.buggyCode,
+        testCode: weboopCourse.finalExam.testCode,
+        scorePoints: weboopCourse.finalExam.examScore,
+        hints: ['Внимательно проанализируйте логику взаимодействия классов и проверьте нарушенные инварианты.'],
+      },
+    };
   }
 
   return null;

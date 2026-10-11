@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useCourseStore } from '../../store/useCourseStore';
 import { getCourseItemById } from '../../data/courseData';
-import { demoLesson, demoTask } from '../../data/demoCourse';
 import { BookOpen, HelpCircle, CheckCircle2, XCircle, Lightbulb, ChevronRight, Award } from 'lucide-react';
 import type { Lesson, CodeTask } from '../../types/course';
 
@@ -13,7 +12,7 @@ export const TheoryView: React.FC = () => {
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, number>>({});
   const [showHints, setShowHints] = useState(false);
 
-  // Поиск активного элемента в курсе (или в демо)
+  // Поиск активного элемента в курсе
   const item = getCourseItemById(currentStepId);
   let activeLesson: Lesson | null = null;
   let activeTask: CodeTask | null = null;
@@ -22,10 +21,6 @@ export const TheoryView: React.FC = () => {
     activeLesson = item.lesson;
   } else if (item?.type === 'task') {
     activeTask = item.task;
-  } else if (currentStepId === demoLesson.id) {
-    activeLesson = demoLesson;
-  } else if (currentStepId === demoTask.id) {
-    activeTask = demoTask;
   }
 
   const handleSelectOption = (qcId: string, optionIndex: number) => {

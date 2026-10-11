@@ -76,4 +76,22 @@ describe('useCourseStore (Zustand & LocalStorage persistence)', () => {
     const invalidSuccess = useCourseStore.getState().importProgress('{ invalid json');
     expect(invalidSuccess).toBe(false);
   });
+
+  it('разблокирует экзамен при достижении 75 баллов и отмечает его завершение', () => {
+    useCourseStore.getState().completeTask('w1-p', 25);
+    useCourseStore.getState().completeTask('w2-p', 25);
+    expect(useCourseStore.getState().isExamUnlocked).toBe(false);
+
+    useCourseStore.getState().completeTask('w3-p', 25);
+    const unlockedState = useCourseStore.getState();
+    expect(unlockedState.currentScore).toBe(75);
+    expect(unlockedState.isExamUnlocked).toBe(true);
+    expect(unlockedState.isExamCompleted).toBe(false);
+
+    // Сдача финального экзамена
+    useCourseStore.getState().completeTask('final-exam', 25);
+    const completedState = useCourseStore.getState();
+    expect(completedState.currentScore).toBe(100);
+    expect(completedState.isExamCompleted).toBe(true);
+  });
 });
