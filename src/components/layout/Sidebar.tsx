@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useCourseStore } from '../../store/useCourseStore';
+import { useLayoutStore } from '../../store/useLayoutStore';
 import { weboopCourse } from '../../data/courseData';
-import { BookOpen, Code2, CheckCircle2, Lock, ChevronDown, ChevronRight, Award } from 'lucide-react';
+import { BookOpen, Code2, CheckCircle2, Lock, ChevronDown, ChevronRight, Award, PanelLeftClose } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
   const currentStepId = useCourseStore((state) => state.currentStepId);
@@ -9,6 +10,9 @@ export const Sidebar: React.FC = () => {
   const completedTasks = useCourseStore((state) => state.completedTasks);
   const isExamUnlocked = useCourseStore((state) => state.isExamUnlocked);
   const isExamCompleted = useCourseStore((state) => state.isExamCompleted);
+
+  const isSidebarOpen = useLayoutStore((state) => state.isSidebarOpen);
+  const toggleSidebar = useLayoutStore((state) => state.toggleSidebar);
 
   const [expandedWeeks, setExpandedWeeks] = useState<Record<number, boolean>>({
     1: true,
@@ -24,14 +28,27 @@ export const Sidebar: React.FC = () => {
   };
 
   return (
-    <aside className="w-64 border-r border-slate-800 bg-slate-950/70 flex flex-col h-full overflow-y-auto">
-      <div className="p-3 border-b border-slate-800/80">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Содержание курса
-        </h2>
-      </div>
+    <aside
+      className={`border-r border-slate-800 bg-slate-950/70 flex flex-col h-full transition-all duration-300 ease-in-out flex-shrink-0 overflow-hidden ${
+        isSidebarOpen ? 'w-64 opacity-100' : 'w-0 opacity-0 border-r-0 pointer-events-none'
+      }`}
+    >
+      <div className="w-64 h-full flex flex-col">
+        <div className="p-3 border-b border-slate-800/80 flex items-center justify-between">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            Содержание курса
+          </h2>
+          <button
+            onClick={toggleSidebar}
+            title="Свернуть меню курса (Ctrl+B)"
+            aria-label="Свернуть меню курса"
+            className="p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
+          >
+            <PanelLeftClose className="w-4 h-4" />
+          </button>
+        </div>
 
-      <div className="flex-1 py-2 space-y-2 px-2">
+      <div className="flex-1 py-2 space-y-2 px-2 overflow-y-auto">
         {/* Динамический рендеринг всех недель курса */}
         {weboopCourse.weeks.map((week) => {
           const isExpanded = Boolean(expandedWeeks[week.weekNumber]);
@@ -195,6 +212,7 @@ export const Sidebar: React.FC = () => {
       <div className="p-3 border-t border-slate-800 text-[11px] text-slate-500 text-center">
         Курс Avtobys • Local-first
       </div>
-    </aside>
+    </div>
+  </aside>
   );
 };

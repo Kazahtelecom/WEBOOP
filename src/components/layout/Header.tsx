@@ -1,12 +1,32 @@
 import React, { useRef } from 'react';
 import { useCourseStore } from '../../store/useCourseStore';
-import { Award, Download, Upload, RotateCcw, Terminal } from 'lucide-react';
+import { useLayoutStore } from '../../store/useLayoutStore';
+import {
+  Award,
+  Download,
+  Upload,
+  RotateCcw,
+  Terminal,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
+  BookOpen,
+  Columns,
+  Code2,
+} from 'lucide-react';
 
 export const Header: React.FC = () => {
   const currentScore = useCourseStore((state) => state.currentScore);
   const exportProgress = useCourseStore((state) => state.exportProgress);
   const importProgress = useCourseStore((state) => state.importProgress);
   const resetProgress = useCourseStore((state) => state.resetProgress);
+
+  const isSidebarOpen = useLayoutStore((state) => state.isSidebarOpen);
+  const toggleSidebar = useLayoutStore((state) => state.toggleSidebar);
+  const layoutMode = useLayoutStore((state) => state.layoutMode);
+  const setLayoutMode = useLayoutStore((state) => state.setLayoutMode);
+  const toggleRightPanel = useLayoutStore((state) => state.toggleRightPanel);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -54,6 +74,20 @@ export const Header: React.FC = () => {
   return (
     <header className="h-14 border-b border-slate-800 bg-slate-950 px-4 flex items-center justify-between select-none">
       <div className="flex items-center space-x-3">
+        {/* Кнопка скрытия/показа левого сайдбара */}
+        <button
+          onClick={toggleSidebar}
+          title={isSidebarOpen ? 'Свернуть содержание курса (Ctrl+B)' : 'Развернуть содержание курса (Ctrl+B)'}
+          aria-label={isSidebarOpen ? 'Свернуть содержание курса' : 'Развернуть содержание курса'}
+          className={`p-1.5 rounded-lg border transition flex items-center justify-center ${
+            isSidebarOpen
+              ? 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              : 'bg-indigo-600/20 border-indigo-500/40 text-indigo-300 hover:bg-indigo-600/30 shadow-sm'
+          }`}
+        >
+          {isSidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+        </button>
+
         <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
           <Terminal className="w-5 h-5" />
         </div>
@@ -64,10 +98,52 @@ export const Header: React.FC = () => {
               Python 3.14 WASM
             </span>
           </div>
-          <p className="text-[11px] text-slate-400 hidden sm:block">
+          <p className="text-[11px] text-slate-400 hidden lg:block">
             Курс объектно-ориентированного программирования
           </p>
         </div>
+      </div>
+
+      {/* Переключатель режимов отображения (Чтение / Сплит / Песочница) */}
+      <div className="hidden md:flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 space-x-0.5">
+        <button
+          onClick={() => setLayoutMode('theory')}
+          title="Режим «Только чтение лекции» (Alt+1)"
+          className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition ${
+            layoutMode === 'theory'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+          }`}
+        >
+          <BookOpen className="w-3.5 h-3.5" />
+          <span>Чтение</span>
+        </button>
+
+        <button
+          onClick={() => setLayoutMode('split')}
+          title="Сплит-режим: лекция + редактор (Alt+2)"
+          className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition ${
+            layoutMode === 'split'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+          }`}
+        >
+          <Columns className="w-3.5 h-3.5" />
+          <span>Сплит</span>
+        </button>
+
+        <button
+          onClick={() => setLayoutMode('code')}
+          title="Режим «Песочница»: редактор на весь экран (Alt+3)"
+          className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition ${
+            layoutMode === 'code'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+          }`}
+        >
+          <Code2 className="w-3.5 h-3.5" />
+          <span>Песочница</span>
+        </button>
       </div>
 
       <div className="flex items-center space-x-3">
@@ -124,6 +200,24 @@ export const Header: React.FC = () => {
             className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded transition"
           >
             <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Кнопка сворачивания/разворачивания правой панели */}
+          <button
+            onClick={toggleRightPanel}
+            title={layoutMode === 'theory' ? 'Развернуть панель редактора' : 'Свернуть панель редактора (режим чтения)'}
+            aria-label={layoutMode === 'theory' ? 'Развернуть панель редактора' : 'Свернуть панель редактора'}
+            className={`p-1.5 rounded transition ${
+              layoutMode === 'theory'
+                ? 'bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            }`}
+          >
+            {layoutMode === 'theory' ? (
+              <PanelRightOpen className="w-4 h-4" />
+            ) : (
+              <PanelRightClose className="w-4 h-4" />
+            )}
           </button>
         </div>
       </div>

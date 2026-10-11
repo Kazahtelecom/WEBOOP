@@ -4,6 +4,7 @@ import { TheoryView } from './components/theory/TheoryView';
 import { CodeEditor } from './components/editor/CodeEditor';
 import { TerminalView } from './components/terminal/TerminalView';
 import { useCourseStore } from './store/useCourseStore';
+import { useLayoutStore } from './store/useLayoutStore';
 import { getCourseItemById } from './data/courseData';
 import type { WorkerRequest, WorkerResponse, TestResultItem } from './types/worker';
 import type { CodeTask } from './types/course';
@@ -13,6 +14,8 @@ export const App: React.FC = () => {
   const userSavedCode = useCourseStore((state) => state.userSavedCode);
   const setUserCode = useCourseStore((state) => state.setUserCode);
   const completeTask = useCourseStore((state) => state.completeTask);
+
+  const layoutMode = useLayoutStore((state) => state.layoutMode);
 
   const [runtimeStatus, setRuntimeStatus] = useState<'loading' | 'ready' | 'running' | 'error'>(
     'loading'
@@ -206,40 +209,68 @@ export const App: React.FC = () => {
     setTestResults(undefined);
   };
 
+  const handleTransitionEnd = (e: React.TransitionEvent<HTMLDivElement>) => {
+    if (e.propertyName === 'width' || e.propertyName === 'flex-basis') {
+      window.dispatchEvent(new Event('resize'));
+    }
+  };
+
   return (
     <AppLayout>
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative w-full h-full">
         {/* Левая панель: Теория / Условие задачи */}
-        <div className="w-full md:w-1/2 border-r border-slate-800 overflow-hidden flex flex-col">
-          <TheoryView />
+        <div
+          onTransitionEnd={handleTransitionEnd}
+          className={`min-w-0 overflow-hidden flex flex-col transition-all duration-300 ease-in-out ${
+            layoutMode === 'code'
+              ? 'w-0 opacity-0 pointer-events-none'
+              : layoutMode === 'theory'
+              ? 'w-full flex-1 border-r-0'
+              : 'w-full md:w-1/2 border-r border-slate-800'
+          }`}
+        >
+          <div className="h-full w-full flex flex-col overflow-hidden">
+            <TheoryView />
+          </div>
         </div>
 
         {/* Правая панель: Редактор кода + Терминал (вертикальный сплит) */}
-        <div className="w-full md:w-1/2 flex flex-col overflow-hidden">
-          {/* Редактор кода (60% высоты) */}
-          <div className="h-3/5 overflow-hidden">
-            <CodeEditor
-              code={currentCode}
-              onChange={(val) => setUserCode(currentStepId, val)}
-              onRunCode={handleRunCode}
-              onRunTests={handleRunTests}
-              onResetCode={handleResetCode}
-              isRunning={runtimeStatus === 'running'}
-              isReady={runtimeStatus === 'ready'}
-              hasTests={Boolean(activeTask?.testCode)}
-            />
-          </div>
+        <div
+          onTransitionEnd={handleTransitionEnd}
+          className={`min-w-0 overflow-hidden flex flex-col transition-all duration-300 ease-in-out ${
+            layoutMode === 'theory'
+              ? 'w-0 opacity-0 pointer-events-none'
+              : layoutMode === 'code'
+              ? 'w-full flex-1'
+              : 'w-full md:w-1/2'
+          }`}
+        >
+          <div className="h-full w-full flex flex-col overflow-hidden">
+            {/* Редактор кода (60% высоты) */}
+            <div className="h-3/5 overflow-hidden">
+              <CodeEditor
+                code={currentCode}
+                onChange={(val) => setUserCode(currentStepId, val)}
+                onRunCode={handleRunCode}
+                onRunTests={handleRunTests}
+                onResetCode={handleResetCode}
+                isRunning={runtimeStatus === 'running'}
+                isReady={runtimeStatus === 'ready'}
+                hasTests={Boolean(activeTask?.testCode)}
+              />
+            </div>
 
-          {/* Терминал вывода и тестов (40% высоты) */}
-          <div className="h-2/5 overflow-hidden">
-            <TerminalView
-              runtimeStatus={runtimeStatus}
-              runtimeVersion={runtimeVersion}
-              output={output}
-              error={error}
-              testResults={testResults}
-              onClear={handleClearTerminal}
-            />
+            {/* Терминал вывода и тестов (40% высоты) */}
+            <div className="h-2/5 overflow-hidden">
+              <TerminalView
+                runtimeStatus={runtimeStatus}
+                runtimeVersion={runtimeVersion}
+                output={output}
+                error={error}
+                testResults={testResults}
+                onClear={handleClearTerminal}
+              />
+            </div>
           </div>
         </div>
       </div>

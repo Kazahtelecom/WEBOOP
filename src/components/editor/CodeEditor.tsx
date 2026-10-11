@@ -1,7 +1,8 @@
 import React from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { python } from '@codemirror/lang-python';
-import { Play, CheckCircle, RotateCcw } from 'lucide-react';
+import { useLayoutStore } from '../../store/useLayoutStore';
+import { Play, CheckCircle, RotateCcw, Maximize2, Minimize2, PanelRightClose } from 'lucide-react';
 
 interface CodeEditorProps {
   code: string;
@@ -24,6 +25,9 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   isReady,
   hasTests = true,
 }) => {
+  const layoutMode = useLayoutStore((state) => state.layoutMode);
+  const setLayoutMode = useLayoutStore((state) => state.setLayoutMode);
+  const toggleRightPanel = useLayoutStore((state) => state.toggleRightPanel);
   return (
     <div className="h-full flex flex-col bg-slate-950">
       {/* Панель действий редактора */}
@@ -81,6 +85,33 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
               Песочница теории
             </div>
           )}
+
+          {/* Разделитель */}
+          <div className="h-4 w-px bg-slate-800 mx-1 hidden sm:block" />
+
+          {/* Развернуть / Свернуть редактор на весь экран (режим песочницы) */}
+          <button
+            onClick={() => setLayoutMode(layoutMode === 'code' ? 'split' : 'code')}
+            title={layoutMode === 'code' ? 'Вернуть сплит-режим (50/50)' : 'Развернуть песочницу на весь экран'}
+            aria-label={layoutMode === 'code' ? 'Вернуть сплит' : 'Развернуть на весь экран'}
+            className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded transition"
+          >
+            {layoutMode === 'code' ? (
+              <Minimize2 className="w-3.5 h-3.5" />
+            ) : (
+              <Maximize2 className="w-3.5 h-3.5" />
+            )}
+          </button>
+
+          {/* Скрыть панель редактора (режим чтения) */}
+          <button
+            onClick={toggleRightPanel}
+            title="Скрыть панель редактора (режим чтения)"
+            aria-label="Скрыть панель редактора"
+            className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded transition"
+          >
+            <PanelRightClose className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
