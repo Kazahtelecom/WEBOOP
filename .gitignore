@@ -5,6 +5,8 @@ build/
 .vite/
 coverage/
 *.log
+__pycache__/
+*.pyc
 
 # Machine-local TFW files (never committed — conventions.md §4)
 .user_preferences.md
