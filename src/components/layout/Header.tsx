@@ -1,6 +1,8 @@
 import React, { useRef } from 'react';
 import { useCourseStore } from '../../store/useCourseStore';
 import { useLayoutStore } from '../../store/useLayoutStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
+import { SettingsModal } from './SettingsModal';
 import {
   Award,
   Download,
@@ -14,6 +16,7 @@ import {
   BookOpen,
   Columns,
   Code2,
+  Settings,
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -22,6 +25,7 @@ export const Header: React.FC = () => {
   const importProgress = useCourseStore((state) => state.importProgress);
   const resetProgress = useCourseStore((state) => state.resetProgress);
 
+  const openSettings = useSettingsStore((state) => state.openSettings);
   const isSidebarOpen = useLayoutStore((state) => state.isSidebarOpen);
   const toggleSidebar = useLayoutStore((state) => state.toggleSidebar);
   const layoutMode = useLayoutStore((state) => state.layoutMode);
@@ -195,6 +199,15 @@ export const Header: React.FC = () => {
           </button>
 
           <button
+            onClick={openSettings}
+            title="Настройки платформы и горячих клавиш"
+            aria-label="Настройки платформы и горячих клавиш"
+            className="p-1.5 text-slate-400 hover:text-indigo-300 hover:bg-slate-800 rounded transition"
+          >
+            <Settings className="w-3.5 h-3.5" />
+          </button>
+
+          <button
             onClick={handleReset}
             title="Сбросить прогресс"
             className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded transition"
@@ -221,6 +234,9 @@ export const Header: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Модальное окно настроек */}
+      <SettingsModal />
     </header>
   );
 };

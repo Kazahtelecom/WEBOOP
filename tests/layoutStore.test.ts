@@ -54,10 +54,51 @@ describe('useLayoutStore (Collapsible Sidebars and Layout Modes)', () => {
   it('сбрасывает состояние layout к значениям по умолчанию через resetLayout', () => {
     useLayoutStore.getState().setSidebarOpen(false);
     useLayoutStore.getState().setLayoutMode('code');
+    useLayoutStore.getState().setSplitRatio(0.7);
+    useLayoutStore.getState().setEditorHeightRatio(0.3);
 
     useLayoutStore.getState().resetLayout();
     const state = useLayoutStore.getState();
     expect(state.isSidebarOpen).toBe(true);
     expect(state.layoutMode).toBe('split');
+    expect(state.splitRatio).toBe(0.5);
+    expect(state.editorHeightRatio).toBe(0.6);
+  });
+
+  it('корректно обновляет и ограничивает пропорции сплита setSplitRatio', () => {
+    // В допустимых пределах 0.2 - 0.8
+    useLayoutStore.getState().setSplitRatio(0.35);
+    expect(useLayoutStore.getState().splitRatio).toBe(0.35);
+
+    // Ограничение снизу (минимум 0.2)
+    useLayoutStore.getState().setSplitRatio(0.05);
+    expect(useLayoutStore.getState().splitRatio).toBe(0.2);
+
+    // Ограничение сверху (максимум 0.8)
+    useLayoutStore.getState().setSplitRatio(0.95);
+    expect(useLayoutStore.getState().splitRatio).toBe(0.8);
+  });
+
+  it('корректно обновляет и ограничивает высоту редактора setEditorHeightRatio', () => {
+    // В пределах 0.2 - 0.85
+    useLayoutStore.getState().setEditorHeightRatio(0.75);
+    expect(useLayoutStore.getState().editorHeightRatio).toBe(0.75);
+
+    // Ограничение снизу (минимум 0.2)
+    useLayoutStore.getState().setEditorHeightRatio(0.1);
+    expect(useLayoutStore.getState().editorHeightRatio).toBe(0.2);
+
+    // Ограничение сверху (максимум 0.85)
+    useLayoutStore.getState().setEditorHeightRatio(0.99);
+    expect(useLayoutStore.getState().editorHeightRatio).toBe(0.85);
+  });
+
+  it('сбрасывает пропорции панелей к дефолтным значениям через resetSplitRatios', () => {
+    useLayoutStore.getState().setSplitRatio(0.75);
+    useLayoutStore.getState().setEditorHeightRatio(0.3);
+
+    useLayoutStore.getState().resetSplitRatios();
+    expect(useLayoutStore.getState().splitRatio).toBe(0.5);
+    expect(useLayoutStore.getState().editorHeightRatio).toBe(0.6);
   });
 });

@@ -2,6 +2,7 @@ import React from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { python } from '@codemirror/lang-python';
 import { useLayoutStore } from '../../store/useLayoutStore';
+import { useSettingsStore, formatHotkeyDisplay } from '../../store/useSettingsStore';
 import { Play, CheckCircle, RotateCcw, Maximize2, Minimize2, PanelRightClose } from 'lucide-react';
 
 interface CodeEditorProps {
@@ -28,6 +29,10 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   const layoutMode = useLayoutStore((state) => state.layoutMode);
   const setLayoutMode = useLayoutStore((state) => state.setLayoutMode);
   const toggleRightPanel = useLayoutStore((state) => state.toggleRightPanel);
+  const hotkeys = useSettingsStore((state) => state.hotkeys);
+
+  const runTestsCombo = formatHotkeyDisplay(hotkeys.runTests).join('+');
+  const runCodeCombo = formatHotkeyDisplay(hotkeys.runCode).join('+');
   return (
     <div className="h-full flex flex-col bg-slate-950">
       {/* Панель действий редактора */}
@@ -51,7 +56,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           <button
             onClick={onRunCode}
             disabled={isRunning || !isReady}
-            title="Выполнить код и просмотреть вывод"
+            title={`Выполнить код и просмотреть вывод (${runCodeCombo})`}
             className={`flex items-center space-x-1.5 text-xs px-3 py-1.5 rounded font-medium transition ${
               isRunning || !isReady
                 ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
@@ -67,7 +72,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
             <button
               onClick={onRunTests}
               disabled={isRunning || !isReady}
-              title="Запустить проверочные автотесты задачи"
+              title={`Запустить проверочные автотесты задачи (${runTestsCombo})`}
               className={`flex items-center space-x-1.5 text-xs px-3.5 py-1.5 rounded font-medium shadow-sm transition ${
                 isRunning || !isReady
                   ? 'bg-indigo-900/50 text-indigo-400/50 cursor-not-allowed'

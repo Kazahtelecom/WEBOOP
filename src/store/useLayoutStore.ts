@@ -6,10 +6,15 @@ export type LayoutMode = 'split' | 'theory' | 'code';
 export interface LayoutStoreState {
   isSidebarOpen: boolean;
   layoutMode: LayoutMode;
+  splitRatio: number;
+  editorHeightRatio: number;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
   setLayoutMode: (mode: LayoutMode) => void;
   toggleRightPanel: () => void;
+  setSplitRatio: (ratio: number) => void;
+  setEditorHeightRatio: (ratio: number) => void;
+  resetSplitRatios: () => void;
   resetLayout: () => void;
 }
 
@@ -68,6 +73,8 @@ export const notifyLayoutResize = (): void => {
 const DEFAULT_LAYOUT_STATE = {
   isSidebarOpen: true,
   layoutMode: 'split' as LayoutMode,
+  splitRatio: 0.5,
+  editorHeightRatio: 0.6,
 };
 
 export const useLayoutStore = create<LayoutStoreState>()(
@@ -99,6 +106,26 @@ export const useLayoutStore = create<LayoutStoreState>()(
           // Если правая панель была видна (в сплите или режиме кода) — скрываем её в режим чтения
           set({ layoutMode: 'theory' });
         }
+        notifyLayoutResize();
+      },
+
+      setSplitRatio: (ratio: number) => {
+        const clamped = Math.min(0.8, Math.max(0.2, ratio));
+        set({ splitRatio: clamped });
+        notifyLayoutResize();
+      },
+
+      setEditorHeightRatio: (ratio: number) => {
+        const clamped = Math.min(0.85, Math.max(0.2, ratio));
+        set({ editorHeightRatio: clamped });
+        notifyLayoutResize();
+      },
+
+      resetSplitRatios: () => {
+        set({
+          splitRatio: DEFAULT_LAYOUT_STATE.splitRatio,
+          editorHeightRatio: DEFAULT_LAYOUT_STATE.editorHeightRatio,
+        });
         notifyLayoutResize();
       },
 
